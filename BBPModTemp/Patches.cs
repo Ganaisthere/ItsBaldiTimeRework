@@ -362,4 +362,34 @@ namespace ItsBaldiTimeRework
             BaldiTimeActions.AddCombo(1f);
         }
     }
+
+    [HarmonyPatch(typeof(WarningScreen))]
+    public class WarningScreenPatch
+    {
+        [HarmonyPatch("Update")]
+        [HarmonyPrefix]
+        public static bool UpdatePrefix()
+        {
+            if (BaldiTimeAnimations.openingPlayed || !BasePlugin.Instance.ConfigOpeningAnimations.Value)
+            {
+                return true;
+            }
+            return false;
+        }
+
+        [HarmonyPatch("Start")]
+        [HarmonyPostfix]
+        public static void StartPostfix(WarningScreen __instance)
+        {
+            if (!BasePlugin.Instance.ConfigOpeningAnimations.Value)
+            {
+                return;
+            }
+            Canvas canvas = __instance.GetComponent<Canvas>();
+            AudioSource audSource = __instance.ReflectionGetVariable("audSource") as AudioSource;
+            audSource.Stop();
+            __instance.textBox.gameObject.SetActive(false);
+            BaldiTimeAnimations.OpeningAnimationsButVoid(canvas, audSource, __instance.textBox, __instance);
+        }
+    }
 }

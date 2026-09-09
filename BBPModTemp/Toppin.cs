@@ -21,8 +21,11 @@ namespace ItsBaldiTimeRework
             intSprite = 0;
             isSaved = false;
             spriteRenderer[0].sprite = CageSprite;
+            this.Navigator.passableObstacles.Add(PassableObstacle.LockedDoor);
+            this.Navigator.passableObstacles.Add(PassableObstacle.Bully);
             behaviorStateMachine.ChangeState(new Toppin_WaitForPlayerPickup(this));
         }
+
     }
     public class Toppin_StateBase : NpcState
     {
@@ -113,6 +116,11 @@ namespace ItsBaldiTimeRework
                 yield return null;
             }
             toppin.spriteRenderer[0].sprite = toppin.IdleSprite[base.toppin.intSprite];
+            if (!BasePlugin.Instance.ConfigShowToppins.Value)
+            {
+                toppin.Despawn();
+                yield break;
+            }
             toppin.behaviorStateMachine.ChangeState(new Toppin_FollowPlayer(toppin));
             yield break;
         }

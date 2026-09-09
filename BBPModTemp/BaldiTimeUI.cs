@@ -26,7 +26,7 @@ namespace ItsBaldiTimeRework
         public static Image RankBackground;
         public static Image RankColor;
         public static Image RankOverlay;
-        public static Sprite PointDisplayBackgroundSprite;
+        //public static Sprite PointDisplayBackgroundSprite;
         public static Sprite RankBackgroundSprite;
         public static Sprite[] RankColorSprites = new Sprite[31];
         public static Sprite[] RankOverlaySprites = new Sprite[7];
@@ -55,6 +55,11 @@ namespace ItsBaldiTimeRework
         public static Sprite[] LapFlagSprites = new Sprite[7];
         public static List<Sprite> ComboLevelsSprites = new List<Sprite>();
         public static SoundObject[] comboup = new SoundObject[3];
+        public static int numOld = 0;
+        public static SoundObject[] rankup = new SoundObject[5];
+        public static SoundObject[] rankdown = new SoundObject[5];
+        public static float rankAniTimer = 0f;
+
 
         public static IEnumerator Flash(BaseGameManager baseGameManager)
         {
@@ -236,7 +241,7 @@ namespace ItsBaldiTimeRework
                     {
                         int num = 0;
                         float fill = 1f;
-                        if (BaldiTimeActions.points + BaldiTimeActions.ComboPoints >= BaldiTimeActions.pointsForPRank)
+                        if (BaldiTimeActions.points + BaldiTimeActions.comboPoints >= BaldiTimeActions.pointsForPRank)
                         {
                             if (BaldiTimeActions.lap >= 2 && BaldiTimeActions.comboKeep)
                             {
@@ -247,24 +252,24 @@ namespace ItsBaldiTimeRework
                                 num = 4;
                             }
                         }
-                        else if (BaldiTimeActions.points + BaldiTimeActions.ComboPoints >= BaldiTimeActions.pointsForPRank / 2f)
+                        else if (BaldiTimeActions.points + BaldiTimeActions.comboPoints >= BaldiTimeActions.pointsForPRank / 2f)
                         {
                             num = 3;
-                            fill = (BaldiTimeActions.points + BaldiTimeActions.ComboPoints - BaldiTimeActions.pointsForPRank / 2f) / (BaldiTimeActions.pointsForPRank / 2f);
+                            fill = (BaldiTimeActions.points + BaldiTimeActions.comboPoints - BaldiTimeActions.pointsForPRank / 2f) / (BaldiTimeActions.pointsForPRank / 2f);
                         }
-                        else if (BaldiTimeActions.points + BaldiTimeActions.ComboPoints >= BaldiTimeActions.pointsForPRank / 4f)
+                        else if (BaldiTimeActions.points + BaldiTimeActions.comboPoints >= BaldiTimeActions.pointsForPRank / 4f)
                         {
                             num = 2;
-                            fill = (BaldiTimeActions.points + BaldiTimeActions.ComboPoints - BaldiTimeActions.pointsForPRank / 4f) / (BaldiTimeActions.pointsForPRank / 4f);
+                            fill = (BaldiTimeActions.points + BaldiTimeActions.comboPoints - BaldiTimeActions.pointsForPRank / 4f) / (BaldiTimeActions.pointsForPRank / 4f);
                         }
-                        else if (BaldiTimeActions.points + BaldiTimeActions.ComboPoints >= BaldiTimeActions.pointsForPRank / 8f)
+                        else if (BaldiTimeActions.points + BaldiTimeActions.comboPoints >= BaldiTimeActions.pointsForPRank / 8f)
                         {
                             num = 1;
-                            fill = (BaldiTimeActions.points + BaldiTimeActions.ComboPoints - BaldiTimeActions.pointsForPRank / 8f) / (BaldiTimeActions.pointsForPRank / 8f);
+                            fill = (BaldiTimeActions.points + BaldiTimeActions.comboPoints - BaldiTimeActions.pointsForPRank / 8f) / (BaldiTimeActions.pointsForPRank / 8f);
                         }
                         else
                         {
-                            fill = BaldiTimeActions.points + BaldiTimeActions.ComboPoints / (BaldiTimeActions.pointsForPRank / 8f);
+                            fill = (BaldiTimeActions.points + BaldiTimeActions.comboPoints) / (BaldiTimeActions.pointsForPRank / 8f);
                         }
                         for (float i = 0f; i < 31f; i++)
                         {
@@ -295,6 +300,30 @@ namespace ItsBaldiTimeRework
                             pointsEdit = BaldiTimeActions.points;
                         }
                         PointDisplayText.text = pointsEdit.ToString();
+                        if (numOld != num)
+                        {
+                            if (numOld < num)
+                            {
+                                numOld = num;
+                                Singleton<CoreGameManager>.Instance.audMan.PlaySingle(rankup[math.min(num, rankup.Length)]);
+                            }
+                            else
+                            {
+                                numOld = num;
+                                Singleton<CoreGameManager>.Instance.audMan.PlaySingle(rankdown[math.max(num, 0)]);
+                            }
+                            rankAniTimer = 0.5f;
+                        }
+                        if (rankAniTimer > 0f)
+                        {
+                            float mun = math.sin(rankAniTimer * math.PI);
+                            RankBackground.rectTransform.localScale = new Vector3(1f + mun, 1f + mun, 1f + mun);
+                            rankAniTimer -= Time.deltaTime;
+                        }
+                        else
+                        {
+                            RankBackground.rectTransform.localScale = Vector3.one;
+                        }
                     }
                 }
                 //----------------------------------------------------------------------
@@ -359,8 +388,8 @@ namespace ItsBaldiTimeRework
             {
                 ComboLevels.sprite = ComboLevelsSprites[UnityEngine.Random.Range(0, ComboLevelsSprites.Count - 1)];
             }
-
-            Singleton<CoreGameManager>.Instance.audMan.PlaySingle(comboup[UnityEngine.Random.Range(0, 2)]);
+            int num = UnityEngine.Random.Range(0, comboup.Length - 1);
+            Singleton<CoreGameManager>.Instance.audMan.PlaySingle(comboup[num]);
 
             float timer = 0f;
             while (timer < 3f)

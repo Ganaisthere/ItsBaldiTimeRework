@@ -10,6 +10,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices.ComTypes;
 using UnityEngine;
 
 namespace ItsBaldiTimeRework
@@ -25,7 +26,8 @@ namespace ItsBaldiTimeRework
 
         //---------------------------------------------------------------------
         public ConfigEntry<bool> ConfigUniqueGenerator;
-
+        public ConfigEntry<bool> ConfigShowToppins;
+        public ConfigEntry<bool> ConfigOpeningAnimations;
         //---------------------------------------------------------------------
         public void Awake()
         {
@@ -36,12 +38,148 @@ namespace ItsBaldiTimeRework
                 false,
                 "If true, the mod's unique modification of the generator will be enabled: each floor has the floor 2 layout of the vanilla game, and the floor type is not limited by the number of floors. Also, The classroom activity will be selected from all activities."
             );
+            ConfigShowToppins = Config.Bind
+            (
+                "General",
+                "Show Toppins",
+                false,
+                "If true, when you get a toppin, he/she will follow you as an ENTITY instead of hiding."
+            );
+            ConfigOpeningAnimations = Config.Bind
+            (
+                "General",
+                "Opening Animations",
+                true,
+                "If true, If true, the mod will show an opening animation before the game's warning screen."
+            );
             Instance = this;
             new Harmony("ganaisthere.plus.itsbalditimerework").PatchAllConditionals();
             ModdedSaveGame.AddSaveHandler(base.Info);
             AddEnglishLocalization("Subtitles_English.json");
+            LoadOpeningAssets();
             LoadingEvents.RegisterOnAssetsLoaded(base.Info, this.LoadAssets(), LoadingEventOrder.Start);
             GeneratorManagement.Register(this, GenerationModType.Addend, AddObjects);
+        }
+
+        private void LoadOpeningAssets()
+        {
+            AddAudioClip("TimeForASmackdown.ogg", "AudioClips/Misc", true);
+            BaldiTimeAnimations.OpeningMusic = AssetMan.Get<AudioClip>("TimeForASmackdown");
+            for (int i = 0; i < 3; i++)
+            {
+                string filename = "0_" + i.ToString();
+                AddTexture2D(filename + ".png", "Textures/Misc/Opening");
+                Texture2DToSprite(filename);
+                BaldiTimeAnimations.Sprites_0[i] = AssetMan.Get<Sprite>(filename);
+            }
+            AddTexture2D("Border.png", "Textures/Misc/Opening");
+            Texture2DToSprite("Border");
+            BaldiTimeAnimations.Border_Sprite = AssetMan.Get<Sprite>("Border");
+            for (int i = 0; i < 2; i++)
+            {
+                string filename = "1_" + i.ToString();
+                AddTexture2D(filename + ".png", "Textures/Misc/Opening");
+                Texture2DToSprite(filename);
+                BaldiTimeAnimations.Sprites_1[i] = AssetMan.Get<Sprite>(filename);
+            }
+            for (int i = 0; i < 4; i++)
+            {
+                string filename = "2_" + i.ToString();
+                AddTexture2D(filename + ".png", "Textures/Misc/Opening");
+                Texture2DToSprite(filename);
+                BaldiTimeAnimations.Sprites_2[i] = AssetMan.Get<Sprite>(filename);
+            }
+            for (int i = 1; i < 3; i++)
+            {
+                string filename = "2_2_" + i.ToString();
+                AddTexture2D(filename + ".png", "Textures/Misc/Opening");
+                Texture2DToSprite(filename);
+                BaldiTimeAnimations.Sprites_2_2[i - 1] = AssetMan.Get<Sprite>(filename);
+            }
+            for (int i = 0; i < 4; i++)
+            {
+                string filename = "3_" + i.ToString();
+                AddTexture2D(filename + ".png", "Textures/Misc/Opening");
+                Texture2DToSprite(filename);
+                BaldiTimeAnimations.Sprites_3[i] = AssetMan.Get<Sprite>(filename);
+            }
+            for (int i = 0; i < 2; i++)
+            {
+                string filename = "3_4_" + i.ToString();
+                AddTexture2D(filename + ".png", "Textures/Misc/Opening");
+                Texture2DToSprite(filename);
+                BaldiTimeAnimations.Sprites_3_4[i] = AssetMan.Get<Sprite>(filename);
+            }
+            for (int i = 0; i < 4; i++)
+            {
+                string filename = "4_" + i.ToString();
+                AddTexture2D(filename + ".png", "Textures/Misc/Opening");
+                Texture2DToSprite(filename);
+                BaldiTimeAnimations.Sprites_4[i] = AssetMan.Get<Sprite>(filename);
+            }
+            for (int i = 0; i < 4; i++)
+            {
+                string filename = "5_" + i.ToString();
+                AddTexture2D(filename + ".png", "Textures/Misc/Opening");
+                Texture2DToSprite(filename);
+                BaldiTimeAnimations.Sprites_5[i] = AssetMan.Get<Sprite>(filename);
+            }
+            for (int i = 0; i < 5; i++)
+            {
+                string filename = "6_" + i.ToString();
+                AddTexture2D(filename + ".png", "Textures/Misc/Opening");
+                Texture2DToSprite(filename);
+                BaldiTimeAnimations.Sprites_6[i] = AssetMan.Get<Sprite>(filename);
+            }
+            for (int i = 0; i < 8; i++)
+            {
+                string filename = "7_" + i.ToString();
+                AddTexture2D(filename + ".png", "Textures/Misc/Opening");
+                Texture2DToSprite(filename);
+                BaldiTimeAnimations.Sprites_7[i] = AssetMan.Get<Sprite>(filename);
+            }
+            for (int i = 0; i < 7; i++)
+            {
+                string filename = "8_" + i.ToString();
+                AddTexture2D(filename + ".png", "Textures/Misc/Opening");
+                Texture2DToSprite(filename);
+                BaldiTimeAnimations.Sprites_8[i] = AssetMan.Get<Sprite>(filename);
+            }
+            for (int i = 0; i < 7; i++)
+            {
+                string filename = "9_" + i.ToString();
+                AddTexture2D(filename + ".png", "Textures/Misc/Opening");
+                Texture2DToSprite(filename);
+                BaldiTimeAnimations.Sprites_9[i] = AssetMan.Get<Sprite>(filename);
+            }
+            for (int i = 0; i < 3; i++)
+            {
+                string filename = "10_" + i.ToString();
+                AddTexture2D(filename + ".png", "Textures/Misc/Opening");
+                Texture2DToSprite(filename);
+                BaldiTimeAnimations.Sprites_10[i] = AssetMan.Get<Sprite>(filename);
+            }
+            for (int i = 0; i < 3; i++)
+            {
+                string filename = "11_" + i.ToString();
+                AddTexture2D(filename + ".png", "Textures/Misc/Opening");
+                Texture2DToSprite(filename);
+                BaldiTimeAnimations.Sprites_11[i] = AssetMan.Get<Sprite>(filename);
+            }
+            for (int i = 0; i < 5; i++)
+            {
+                string filename = "12_" + i.ToString();
+                AddTexture2D(filename + ".png", "Textures/Misc/Opening");
+                Texture2DToSprite(filename);
+                BaldiTimeAnimations.Sprites_12[i] = AssetMan.Get<Sprite>(filename);
+            }
+            for (int i = 0; i < 2; i++)
+            {
+                string filename = "13_" + i.ToString();
+                AddTexture2D(filename + ".png", "Textures/Misc/Opening");
+                Texture2DToSprite(filename);
+                BaldiTimeAnimations.Sprites_13[i] = AssetMan.Get<Sprite>(filename);
+            }
         }
 
         private IEnumerator LoadAssets()
@@ -74,7 +212,6 @@ namespace ItsBaldiTimeRework
                 AddTexture2D("Toppins_" + i.ToString() + "_Yay.png", "Textures/Entity");
             }
             AddTexture2D("Notebook_John.png", "Textures/Misc");
-            AddTexture2D("PointDisplay.png", "Textures/GUI");
             AddTexture2D("Rank_Sheet.png", "Textures/GUI");
             AddTexture2D("ComboDisplay_Sheet.png", "Textures/GUI");
             AddTexture2D("LapPortal_0.png", "Textures/Entity");
@@ -95,21 +232,30 @@ namespace ItsBaldiTimeRework
                 }
             }
 
-            yield return "Loading SoundEffects...";
-            AddSoundObject("JOHN_PILLAR_IMPACT.ogg", "SoundObjects/Effects");
+            yield return "Loading Sounds...";
+            AddSoundObject("JOHN_PILLAR_IMPACT.ogg", "SoundObjects/Effects", true);
             BaldiTimeActions.JOHN_PILLAR_IMPACT = AssetMan.Get<SoundObject>("JOHN_PILLAR_IMPACT");
-            AddSoundObject("bellcollectsmall.ogg", "SoundObjects/Effects");
-            AddSoundObject("sfx_collecttoppin.ogg", "SoundObjects/Effects");
-            AddAudioClip("Meatophobia.ogg", "SoundObjects/Effects");
-            AddSoundObject("Lapping.ogg", "SoundObjects/Effects");
-            AddSoundObject("sfx_lapenter.ogg", "SoundObjects/Effects");
-            AddSoundObject("sfx_lapexit.ogg", "SoundObjects/Effects");
-            AddSoundObject("comboup1.ogg", "SoundObjects/Effects");
+            AddSoundObject("bellcollectsmall.ogg", "SoundObjects/Effects", true);
+            AddSoundObject("sfx_collecttoppin.ogg", "SoundObjects/Effects", true);
+            AddAudioClip("Meatophobia.ogg", "AudioClips/Misc", true);
+            AddSoundObject("Lapping.ogg", "SoundObjects/Effects", true);
+            AddSoundObject("sfx_lapenter.ogg", "SoundObjects/Effects", true);
+            AddSoundObject("sfx_lapexit.ogg", "SoundObjects/Effects", true);
+            AddSoundObject("comboup1.ogg", "SoundObjects/Effects", true);
             BaldiTimeUI.comboup[0] = AssetMan.Get<SoundObject>("comboup1");
             AddSoundObject("comboup2.ogg", "SoundObjects/Effects");
             BaldiTimeUI.comboup[1] = AssetMan.Get<SoundObject>("comboup2");
             AddSoundObject("comboup4.ogg", "SoundObjects/Effects");
             BaldiTimeUI.comboup[2] = AssetMan.Get<SoundObject>("comboup4");
+            for (int i = 1; i < 6; i++)
+            {
+                string up = "rankup" + i.ToString();
+                string down = "rankdown" + i.ToString();
+                AddSoundObject(up + ".ogg", "SoundObjects/Effects", true);
+                AddSoundObject(down + ".ogg", "SoundObjects/Effects", true);
+                BaldiTimeUI.rankup[i - 1] = AssetMan.Get<SoundObject>(up);
+                BaldiTimeUI.rankdown[i - 1] = AssetMan.Get<SoundObject>(down);
+            }
 
             yield return "Loading Lap Musics...";
             AddAudioClip("Lap1-Intro.ogg", "SoundObjects/Laps");
@@ -118,7 +264,7 @@ namespace ItsBaldiTimeRework
             AddAudioClip("Lap2-Intro.ogg", "SoundObjects/Laps");
             AddAudioClip("Lap2-Loop.ogg", "SoundObjects/Laps");
 
-            getfiles = Directory.GetFiles(AssetLoader.GetModPath(this) + "/SoundObjects/Spoop/", "*.ogg", SearchOption.TopDirectoryOnly);
+            getfiles = Directory.GetFiles(AssetLoader.GetModPath(this) + "/AudioClips/Spoop/", "*.ogg", SearchOption.TopDirectoryOnly);
             if (getfiles.Length > 0)
             {
                 foreach (string file in getfiles)
@@ -126,7 +272,7 @@ namespace ItsBaldiTimeRework
                     yield return "Loading Floor Musics...";
                     string fileNameWithoutExtension = Path.GetFileNameWithoutExtension(file);
                     string fileName = Path.GetFileName(file);
-                    AddAudioClip(fileName, "SoundObjects/Spoop");
+                    AddAudioClip(fileName, "AudioClips/Spoop");
                     if (fileNameWithoutExtension.Contains("_F1"))
                     {
                         BaldiTimeActions.F1Mus.Add(fileNameWithoutExtension);
@@ -185,7 +331,7 @@ namespace ItsBaldiTimeRework
                 .SetShopPrice(12251225)
                 .SetGeneratorCost(12251225)
                 .SetItemComponent<ITM_BaldiClock>()
-                .SetMeta(ItemFlags.InstantUse, new string[]{"BaldiClock"})
+                .SetMeta(ItemFlags.InstantUse, new string[] { "BaldiClock" })
                 .SetAsInstantUse()
                 .SetPickupSound(AssetMan.Get<SoundObject>("bellcollectsmall"))
                 .Build();
@@ -284,8 +430,6 @@ namespace ItsBaldiTimeRework
         }
         private void SetupTimerBarSprites()
         {
-            Texture2DToSprite("PointDisplay");
-            BaldiTimeUI.PointDisplayBackgroundSprite = AssetMan.Get<Sprite>("PointDisplay");
             Texture2D texture2D = AssetMan.Get<Texture2D>("Rank_Sheet");
             for (int p = 0; p < 4; p++)
             {

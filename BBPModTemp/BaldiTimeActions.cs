@@ -24,7 +24,7 @@ namespace ItsBaldiTimeRework
         public static List<NPC> toppins = new List<NPC>();
         public static Sprite Notebook_John = null;
         public static float points = 0f;
-        public static float ComboPoints = 0f;
+        public static float comboPoints = 0f;
         public static float pointsForPRank = 0f;
         public static string[] ranks = new string[8] { "D", "C", "B", "A", "S", "P", "L", "X" };
         public static string rank = "D";
@@ -38,7 +38,7 @@ namespace ItsBaldiTimeRework
         public static void AddCombo(float comboAdd, float time = 1225f)
         {
             combo += comboAdd;
-            ComboPoints += 100f;
+            comboPoints += 100f;
             if (combo <= 0f)
             {
                 return;
@@ -77,6 +77,8 @@ namespace ItsBaldiTimeRework
                     }
                     else
                     {
+                        points += comboPoints;
+                        comboPoints = 0;
                         combo = 0f;
                         comboTimer = 0f;
                         comboKeep = false;
@@ -98,7 +100,7 @@ namespace ItsBaldiTimeRework
         {
             notebookmax = baseGameManager.Ec.notebookTotal;
             points = 0f;
-            ComboPoints = 0f;
+            comboPoints = 0f;
             pointsForPRank = 0f;
             rank = "D";
             List<RandomEvent> events = baseGameManager.Ec.ReflectionGetVariable("events") as List<RandomEvent>;
@@ -253,6 +255,8 @@ namespace ItsBaldiTimeRework
             BaldiTimeUI.ComboTimerEdit = 0f;
             comboKeep = true;
             enteringLap = false;
+            BaldiTimeUI.numOld = 0;
+            BaldiTimeUI.rankAniTimer = 0f;
         }
         public static IEnumerator WaitForRun(BaseGameManager baseGameManager)
         {
