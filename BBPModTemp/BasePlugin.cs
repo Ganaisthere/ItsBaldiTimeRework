@@ -10,12 +10,11 @@ using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Runtime.InteropServices.ComTypes;
 using UnityEngine;
 
 namespace ItsBaldiTimeRework
 {
-    [BepInPlugin("ganaisthere.plus.itsbalditimerework", "Its Baldi Time: Rework", "0.0.0.0")]
+    [BepInPlugin("ganaisthere.plus.itsbalditimerework", "Its Baldi Time: Rework", "0.1.0.0")]
     [BepInDependency("mtm101.rulerp.bbplus.baldidevapi")]
 
     public class BasePlugin : BaseUnityPlugin
@@ -217,6 +216,19 @@ namespace ItsBaldiTimeRework
             AddTexture2D("LapPortal_0.png", "Textures/Entity");
             AddTexture2D("LapPortal_1.png", "Textures/Entity");
             AddTexture2D("Lap2Flag.png", "Textures/GUI/LapFlags");
+            AddTexture2D("RankAnime_Student_0.png", "Textures/Misc/RankAnime");
+            AddTexture2D("RankAnime_Student_D.png", "Textures/Misc/RankAnime");
+            AddTexture2D("RankAnime_Student_B.png", "Textures/Misc/RankAnime");
+            AddTexture2D("RankAnime_Student_C.png", "Textures/Misc/RankAnime");
+            AddTexture2D("RankAnime_Student_A.png", "Textures/Misc/RankAnime");
+            AddTexture2D("RankAnime_Student_S.png", "Textures/Misc/RankAnime");
+            AddTexture2D("RankAnime_Student_P.png", "Textures/Misc/RankAnime");
+            AddTexture2D("RankAnime_Rank_D.png", "Textures/Misc/RankAnime");
+            AddTexture2D("RankAnime_Rank_B.png", "Textures/Misc/RankAnime");
+            AddTexture2D("RankAnime_Rank_C.png", "Textures/Misc/RankAnime");
+            AddTexture2D("RankAnime_Rank_A.png", "Textures/Misc/RankAnime");
+            AddTexture2D("RankAnime_Rank_S.png", "Textures/Misc/RankAnime");
+            AddTexture2D("RankAnime_Rank_P.png", "Textures/Misc/RankAnime");
 
             yield return "Loading...IDK";
             string[] getfiles = Directory.GetFiles(AssetLoader.GetModPath(this) + "/Textures/GUI/ComboLevels/", "*.png", SearchOption.TopDirectoryOnly);
@@ -256,6 +268,20 @@ namespace ItsBaldiTimeRework
                 BaldiTimeUI.rankup[i - 1] = AssetMan.Get<SoundObject>(up);
                 BaldiTimeUI.rankdown[i - 1] = AssetMan.Get<SoundObject>(down);
             }
+            AddSoundObject("Rank_D.ogg", "SoundObjects/Effects/Rank", true);
+            BaldiTimeAnimations.RankSounds[0] = AssetMan.Get<SoundObject>("Rank_D");
+            AddSoundObject("Rank_C.ogg", "SoundObjects/Effects/Rank", true);
+            BaldiTimeAnimations.RankSounds[1] = AssetMan.Get<SoundObject>("Rank_C");
+            AddSoundObject("Rank_B.ogg", "SoundObjects/Effects/Rank", true);
+            BaldiTimeAnimations.RankSounds[2] = AssetMan.Get<SoundObject>("Rank_B");
+            AddSoundObject("Rank_A.ogg", "SoundObjects/Effects/Rank", true);
+            BaldiTimeAnimations.RankSounds[3] = AssetMan.Get<SoundObject>("Rank_A");
+            AddSoundObject("Rank_S.ogg", "SoundObjects/Effects/Rank", true);
+            BaldiTimeAnimations.RankSounds[4] = AssetMan.Get<SoundObject>("Rank_S");
+            AddSoundObject("Rank_P.ogg", "SoundObjects/Effects/Rank", true);
+            BaldiTimeAnimations.RankSounds[5] = AssetMan.Get<SoundObject>("Rank_P");
+            AddSoundObject("Rank_L.ogg", "SoundObjects/Effects/Rank", true);
+            BaldiTimeAnimations.RankSounds[6] = AssetMan.Get<SoundObject>("Rank_L");
 
             yield return "Loading Lap Musics...";
             AddAudioClip("Lap1-Intro.ogg", "SoundObjects/Laps");
@@ -300,6 +326,30 @@ namespace ItsBaldiTimeRework
                 }
             }
 
+            yield return "Loading Title Cards...";
+            string[] getPng = Directory.GetFiles(AssetLoader.GetModPath(this) + "/TitleCard/", "*.png", SearchOption.TopDirectoryOnly);
+            if (getPng.Length > 0)
+            {
+                foreach (string file in getPng)
+                {
+                    string fileNameWithoutExtension = Path.GetFileNameWithoutExtension(file);
+                    string fileName = Path.GetFileName(file);
+                    if (!fileName.Contains("-Title.png"))
+                    {
+                        AddTexture2D(fileName, "TitleCard");
+                        Texture2DToSprite(fileNameWithoutExtension);
+                        BaldiTimeAnimations.TitleCardBackSprites.Add(AssetMan.Get<Sprite>(fileNameWithoutExtension));
+
+                        AddTexture2D(fileNameWithoutExtension + "-Title.png", "TitleCard");
+                        Texture2DToSprite(fileNameWithoutExtension + "-Title");
+                        BaldiTimeAnimations.TitleCardTitleSprites.Add(AssetMan.Get<Sprite>(fileNameWithoutExtension + "-Title"));
+
+                        AddSoundObject(fileNameWithoutExtension + "-Sound.ogg", "TitleCard");
+                        BaldiTimeAnimations.TitleCardSounds.Add(AssetMan.Get<SoundObject>(fileNameWithoutExtension + "-Sound"));
+                    }
+                }
+            }
+
             yield return "Add Sprites...";
             TextureSheetToSprite("BaldiTimeLogo_Sheet", 2f, 0f, "BaldiTimeLogo_0");
             BaldiTimeUI.baldiTimeLogoSprites[0] = AssetMan.Get<Sprite>("BaldiTimeLogo_0");
@@ -322,6 +372,32 @@ namespace ItsBaldiTimeRework
             Texture2DToSprite("LapPortal_1", 16f);
             Texture2DToSprite("Lap2Flag");
             BaldiTimeUI.LapFlagSprites[0] = AssetMan.Get<Sprite>("Lap2Flag");
+            Texture2DToSprite("RankAnime_Student_0");
+            BaldiTimeAnimations.StudentSprite = AssetMan.Get<Sprite>("RankAnime_Student_0");
+            Texture2DToSprite("RankAnime_Student_D");
+            BaldiTimeAnimations.StudentSprites[0] = AssetMan.Get<Sprite>("RankAnime_Student_D");
+            Texture2DToSprite("RankAnime_Student_C");
+            BaldiTimeAnimations.StudentSprites[1] = AssetMan.Get<Sprite>("RankAnime_Student_C");
+            Texture2DToSprite("RankAnime_Student_B");
+            BaldiTimeAnimations.StudentSprites[2] = AssetMan.Get<Sprite>("RankAnime_Student_B");
+            Texture2DToSprite("RankAnime_Student_A");
+            BaldiTimeAnimations.StudentSprites[3] = AssetMan.Get<Sprite>("RankAnime_Student_A");
+            Texture2DToSprite("RankAnime_Student_S");
+            BaldiTimeAnimations.StudentSprites[4] = AssetMan.Get<Sprite>("RankAnime_Student_S");
+            Texture2DToSprite("RankAnime_Student_P");
+            BaldiTimeAnimations.StudentSprites[5] = AssetMan.Get<Sprite>("RankAnime_Student_P");
+            Texture2DToSprite("RankAnime_Rank_D");
+            BaldiTimeAnimations.RankSprites[0] = AssetMan.Get<Sprite>("RankAnime_Rank_D");
+            Texture2DToSprite("RankAnime_Rank_C");
+            BaldiTimeAnimations.RankSprites[1] = AssetMan.Get<Sprite>("RankAnime_Rank_C");
+            Texture2DToSprite("RankAnime_Rank_B");
+            BaldiTimeAnimations.RankSprites[2] = AssetMan.Get<Sprite>("RankAnime_Rank_B");
+            Texture2DToSprite("RankAnime_Rank_A");
+            BaldiTimeAnimations.RankSprites[3] = AssetMan.Get<Sprite>("RankAnime_Rank_A");
+            Texture2DToSprite("RankAnime_Rank_S");
+            BaldiTimeAnimations.RankSprites[4] = AssetMan.Get<Sprite>("RankAnime_Rank_S");
+            Texture2DToSprite("RankAnime_Rank_P");
+            BaldiTimeAnimations.RankSprites[5] = AssetMan.Get<Sprite>("RankAnime_Rank_P");
 
             yield return "Add ItemObjects...";
             ItemObject BaldiClock = new ItemBuilder(Info)

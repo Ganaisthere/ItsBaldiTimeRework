@@ -239,8 +239,9 @@ namespace ItsBaldiTimeRework
                 }
             }
             pointsForPRank += 3000f;
-            baseGameManager.StartCoroutine(WaitForRun(baseGameManager));
+            //baseGameManager.StartCoroutine(WaitForRun(baseGameManager));
             baseGameManager.StartCoroutine(ComboMechanism(baseGameManager));
+            Start(baseGameManager);
         }
         public static void Reset()
         {
@@ -330,6 +331,66 @@ namespace ItsBaldiTimeRework
             Singleton<CoreGameManager>.Instance.GetHud(0).StartCoroutine(BaldiTimeUI.Flash(baseGameManager));
             baseGameManager.StartCoroutine(WaitForLastNotebook(baseGameManager));
             yield break;
+        }
+        public static void Start(BaseGameManager baseGameManager)
+        {
+            Singleton<MusicManager>.Instance.StopMidi();
+            baseGameManager.BeginSpoopMode();
+            baseGameManager.Ec.SpawnNPCs();
+            baseGameManager.Ec.StartEventTimers();
+            if (Singleton<CoreGameManager>.Instance.currentMode == Mode.Main)
+            {
+                RoomController Office = null ;
+                foreach (RoomController room in baseGameManager.Ec.rooms)
+                {
+                    RoomCategory category = room.category;
+                    if (category == RoomCategory.Class || category == RoomCategory.Faculty || category == RoomCategory.Office)
+                    {
+                        Office = room;
+                        break;
+                    }
+                }
+                if (Office != null)
+                {
+                    baseGameManager.Ec.GetBaldi().transform.position = Office.RandomEntitySafeCellNoGarbage().TileTransform.position;
+                }
+            }
+            else if (Singleton<CoreGameManager>.Instance.currentMode == Mode.Free)
+            {
+                baseGameManager.Ec.GetBaldi().Despawn();
+            }
+            List<string> chaseMusics = new List<string>();
+            if (Singleton<CoreGameManager>.Instance.sceneObject.levelTitle == "F1")
+            {
+                chaseMusics.AddRange(F1Mus);
+                chaseMusics.AddRange(AllMus);
+            }
+            else if (Singleton<CoreGameManager>.Instance.sceneObject.levelTitle == "F2")
+            {
+                chaseMusics.AddRange(F2Mus);
+                chaseMusics.AddRange(AllMus);
+            }
+            else if (Singleton<CoreGameManager>.Instance.sceneObject.levelTitle == "F3")
+            {
+                chaseMusics.AddRange(F3Mus);
+                chaseMusics.AddRange(AllMus);
+            }
+            else if (Singleton<CoreGameManager>.Instance.sceneObject.levelTitle == "F4")
+            {
+                chaseMusics.AddRange(F4Mus);
+                chaseMusics.AddRange(AllMus);
+            }
+            else if (Singleton<CoreGameManager>.Instance.sceneObject.levelTitle == "F5")
+            {
+                chaseMusics.AddRange(F5Mus);
+                chaseMusics.AddRange(AllMus);
+            }
+            if (chaseMusics.Count > 0)
+            {
+                BaseGameManagerPatches.musPlayer.Stop();
+                BaseGameManagerPatches.musPlayer.Play(chaseMusics[Random.Range(0, chaseMusics.Count - 1)], true);
+            }
+            baseGameManager.StartCoroutine(WaitForLastNotebook(baseGameManager));
         }
         public static IEnumerator WaitForLastNotebook(BaseGameManager baseGameManager)
         {

@@ -1,9 +1,11 @@
 ﻿using MTM101BaldAPI.AssetTools;
+using MTM101BaldAPI.Reflection;
 using System.Collections;
+using System.Collections.Generic;
 using TMPro;
-using tripolygon.UModeler;
 using Unity.Mathematics;
 using UnityEngine;
+using UnityEngine.SocialPlatforms;
 using UnityEngine.UI;
 
 namespace ItsBaldiTimeRework
@@ -32,13 +34,323 @@ namespace ItsBaldiTimeRework
         public static Sprite[] Sprites_13 = new Sprite[2];
         public static Image Border;
         public static Sprite Border_Sprite;
+        public static RawImage whiteFlash;
+        //-----------------------------------------------------
+        public static List<Sprite> TitleCardBackSprites = new List<Sprite>();
+        public static List<Sprite> TitleCardTitleSprites = new List<Sprite>();
+        public static List<SoundObject> TitleCardSounds = new List<SoundObject>();
+        //-----------------------------------------------------
+        public static Sprite StudentSprite;
+        public static Sprite[] StudentSprites = new Sprite[7];
+        public static SoundObject[] RankSounds = new SoundObject[7];
+        public static Sprite[] RankSprites = new Sprite[7];
 
+        public static void RankAnimationsButVoid(AudioManager audMan, ElevatorScreen elevatorScreen)
+        {
+            Singleton<MusicManager>.Instance.StartCoroutine(RankAnimations(audMan, elevatorScreen));
+        }
+        public static IEnumerator RankAnimations(AudioManager audMan, ElevatorScreen elevatorScreen)
+        {
+            while (elevatorScreen.transform.localScale.x <= 0f)
+            {
+                yield return null;
+            }
+            while (elevatorScreen.transform.localScale != Vector3.one)
+            {
+                yield return null;
+            }
+
+            GameObject WhiteBackGround_Obj = new GameObject("WhiteBackGround");
+            WhiteBackGround_Obj.transform.SetParent(elevatorScreen.Canvas.transform, false);
+            RawImage WhiteBackGround = WhiteBackGround_Obj.AddComponent<RawImage>();
+            WhiteBackGround.rectTransform.sizeDelta = new Vector2(480f, 360f);
+            WhiteBackGround.rectTransform.anchoredPosition = new Vector2(0f, 720f);
+            WhiteBackGround.color = Color.white;
+
+            GameObject Rank_Obj = new GameObject("Rank");
+            Rank_Obj.transform.SetParent(elevatorScreen.Canvas.transform, false);
+            Image Rank = Rank_Obj.AddComponent<Image>();
+            Rank.rectTransform.sizeDelta = new Vector2(480f, 360f);
+            Rank.rectTransform.anchoredPosition = new Vector2(960f, 0f);
+            Rank.color = Color.white;
+
+            GameObject Student_Obj = new GameObject("Student");
+            Student_Obj.transform.SetParent(elevatorScreen.Canvas.transform, false);
+            Image Student = Student_Obj.AddComponent<Image>();
+            Student.rectTransform.sizeDelta = new Vector2(480f, 360f);
+            Student.rectTransform.anchoredPosition = new Vector2(960f, 0f);
+            Student.sprite = StudentSprite;
+            Student.color = Color.white;
+
+            GameObject Border_L_Obj = new GameObject("Border_L");
+            Border_L_Obj.transform.SetParent(elevatorScreen.Canvas.transform, false);
+            RawImage Border_L = Border_L_Obj.AddComponent<RawImage>();
+            Border_L.rectTransform.sizeDelta = new Vector2(480f, 360f);
+            Border_L.rectTransform.anchoredPosition = new Vector2(-480f, 0f);
+            Border_L.color = Color.black;
+
+            GameObject Border_R_Obj = new GameObject("Border_R");
+            Border_R_Obj.transform.SetParent(elevatorScreen.Canvas.transform, false);
+            RawImage Border_R = Border_R_Obj.AddComponent<RawImage>();
+            Border_R.rectTransform.sizeDelta = new Vector2(480f, 360f);
+            Border_R.rectTransform.anchoredPosition = new Vector2(480f, 0f);
+            Border_R.color = Color.black;//95874046
+
+            audMan.PlaySingle(RankSounds[BaldiTimeUI.numOld]);
+            Rank.sprite = RankSprites[BaldiTimeUI.numOld];
+
+            float timer = 0f;
+            while (timer <= 14f)
+            {
+                if (elevatorScreen == null)
+                {
+                    yield break;
+                }
+                elevatorScreen.ReflectionSetVariable("busy", true);
+                Singleton<MusicManager>.Instance.StopMidi();
+                if (timer <= 1f)
+                {
+                    WhiteBackGround.rectTransform.anchoredPosition = new Vector2(0f, 360f - 360f * math.sin(timer * (math.PI / 2)));
+                }
+                else
+                {
+                    WhiteBackGround.rectTransform.anchoredPosition = new Vector2(0f, 0f);
+                }
+
+                if (timer <= 1f)
+                {
+                    Student.rectTransform.anchoredPosition = new Vector2(480f - 480f * math.sin(timer * (math.PI / 2)), 0f);
+                }
+                else if (timer <= 2f)
+                {
+                    Student.rectTransform.anchoredPosition = new Vector2(0f, 0f);
+                }
+                else if (timer <= 3f)
+                {
+                    Student.rectTransform.anchoredPosition = new Vector2(-480f * (1f + math.sin((timer + 1f) * (math.PI / 2))), 0f);
+                }
+                else if (timer <= 4f)
+                {
+                    Student.sprite = StudentSprites[BaldiTimeUI.numOld];
+                    Student.rectTransform.anchoredPosition = new Vector2(-480f + 480f * math.sin((timer - 3f) * (math.PI / 2)), 0f);
+                }
+                else
+                {
+                    Student.rectTransform.anchoredPosition = new Vector2(0f, 0f);
+                }
+
+                if (timer <= 3f)
+                {
+                    Rank.rectTransform.anchoredPosition = new Vector2(480f, 0f);
+                }
+                else if (timer <= 4f)
+                {
+                    Rank.rectTransform.anchoredPosition = new Vector2(480f - 480f * math.sin((timer - 3f) * (math.PI / 2)), 0f);
+                }
+                else if (timer <= 9.3f)
+                {
+                    Rank.rectTransform.anchoredPosition = new Vector2(0f, 0f);
+                }
+                else
+                {
+                    Rank.rectTransform.anchoredPosition = new Vector2(0f, 0f);
+                    Color color = new Color(1f, 0.5f, 0f, 1f);
+                    WhiteBackGround.color = color;
+                    Student.color = color;
+                    Rank.color = color;
+                }
+                timer += Time.unscaledDeltaTime;
+                yield return null;
+            }
+
+            Singleton<MusicManager>.Instance.PlayMidi("Elevator", true);
+            timer = 0f;
+            while (timer <= 1f)
+            {
+                timer += Time.unscaledDeltaTime;
+                WhiteBackGround.rectTransform.anchoredPosition = new Vector2(0f, -360f * math.sin(timer * (math.PI / 2)));
+                Student.rectTransform.anchoredPosition = new Vector2(0f, -360f * math.sin(timer * (math.PI / 2)));
+                Rank.rectTransform.anchoredPosition = new Vector2(0f, -360f * math.sin(timer * (math.PI / 2)));
+                yield return null;
+            }
+            Object.Destroy(WhiteBackGround_Obj);
+            Object.Destroy(Student_Obj);
+            Object.Destroy(Rank_Obj);
+            Object.Destroy(Border_L_Obj);
+            Object.Destroy(Border_R_Obj);
+
+            List<IEnumerator> queuedEnumerators = elevatorScreen.ReflectionGetVariable("queuedEnumerators") as List<IEnumerator>;
+            queuedEnumerators.Clear();
+            elevatorScreen.ReflectionSetVariable("busy", false);
+
+            yield break;
+        }
+        public static void TitleCardAnimationsButVoid(Canvas canvas, AudioManager audMan, ElevatorScreen elevatorScreen)
+        {
+            Singleton<MusicManager>.Instance.StartCoroutine(TitleCardAnimations(canvas, audMan, elevatorScreen));
+        }
+        public static IEnumerator TitleCardAnimations(Canvas canvas, AudioManager audMan, ElevatorScreen elevatorScreen)
+        {
+            int randomInt;
+            Debug.LogWarning("TitleCardBackSprites.Count = " + TitleCardBackSprites.Count);
+            Debug.LogWarning("TitleCardTitleSprites.Count = " + TitleCardTitleSprites.Count);
+            Debug.LogWarning("TitleCardSounds.Count = " + TitleCardSounds.Count);
+
+            while (elevatorScreen.transform.localScale.x <= 0f)
+            {
+                yield return null;
+            }
+            while (elevatorScreen.transform.localScale != Vector3.one)
+            {
+                yield return null;
+            }
+
+            GameObject TitleCardMain_Obj = new GameObject("TitleCardMain");
+            TitleCardMain_Obj.transform.SetParent(canvas.transform, false);
+            RawImage TitleCardMain = TitleCardMain_Obj.AddComponent<RawImage>();
+            TitleCardMain.color = new Color(0f, 0f, 0f, 0f);
+            TitleCardMain.rectTransform.sizeDelta = new Vector2(480f, 360f);
+
+            GameObject TitleCardBack_Obj = new GameObject("TitleCardBack");
+            TitleCardBack_Obj.transform.SetParent(TitleCardMain.transform, false);
+            Image TitleCardBack = TitleCardBack_Obj.AddComponent<Image>();
+            TitleCardBack.rectTransform.sizeDelta = new Vector2(480f, 360f);
+            randomInt = UnityEngine.Random.Range(0, TitleCardBackSprites.Count - 1);
+            TitleCardBack.sprite = TitleCardBackSprites[randomInt];
+
+            GameObject TitleCardTitle_Obj = new GameObject("TitleCardTitle");
+            TitleCardTitle_Obj.transform.SetParent(TitleCardMain.transform, false);
+            Image TitleCardTitle = TitleCardTitle_Obj.AddComponent<Image>();
+            TitleCardTitle.rectTransform.sizeDelta = new Vector2(480f, 360f);
+            if (TitleCardTitleSprites[randomInt] != null)
+            {
+                TitleCardTitle.sprite = TitleCardTitleSprites[randomInt];
+            }
+            else
+            {
+                TitleCardTitle.color = new Color(1f, 1f, 1f, 0f);
+            }
+
+            GameObject Flash_Obj = new GameObject("Flash");
+            Flash_Obj.transform.SetParent(TitleCardMain.transform, false);
+            RawImage Flash = Flash_Obj.AddComponent<RawImage>();
+            Flash.color = new Color(0f, 0f, 0f, 0f);
+            Flash.rectTransform.anchorMin = new Vector2(0f, 0f);
+            Flash.rectTransform.anchorMax = new Vector2(1f, 1f);
+
+            if (TitleCardSounds[randomInt] != null)
+            {
+                audMan.PlaySingle(TitleCardSounds[randomInt]);
+            }
+
+            float timer = 0f;
+            float timer0 = 0f;
+            while (timer < 4f)
+            {
+                if (elevatorScreen == null)
+                {
+                    yield break;
+                }
+                elevatorScreen.ReflectionSetVariable("busy", true);
+                Singleton<MusicManager>.Instance.StopMidi();
+                if (timer < 3f)
+                {
+                    Flash.color = new Color(0f, 0f, 0f, 0f);
+                }
+                else
+                {
+                    Flash.color = new Color(0f, 0f, 0f, timer - 3f);
+                }
+
+                if (timer < 1.5f)
+                {
+                    float edit = math.sin((timer / 1.5f) * (math.PI / 2));
+                    TitleCardBack.rectTransform.anchoredPosition = new Vector2(480f - 480f * edit, 0f);
+                    TitleCardTitle.rectTransform.anchoredPosition = new Vector2(480f - 480f * edit, 0f);
+                }
+                else
+                {
+                    TitleCardBack.rectTransform.anchoredPosition = new Vector2(0f, 0f);
+                    TitleCardTitle.rectTransform.anchoredPosition = new Vector2(0f, 0f);
+                }
+
+                if (timer0 < 0.1f)
+                {
+                    timer0 += Time.unscaledDeltaTime;
+                }
+                else
+                {
+                    timer0 = 0f;
+                    float randomFloat0 = UnityEngine.Random.Range(-2f, 2f);
+                    float randomFloat1 = UnityEngine.Random.Range(-2f, 2f);
+                    TitleCardTitle.rectTransform.anchoredPosition = new Vector2(TitleCardTitle.rectTransform.anchoredPosition.x + randomFloat0, TitleCardTitle.rectTransform.anchoredPosition.y + randomFloat1);
+                }
+
+                timer += Time.unscaledDeltaTime;
+                yield return null;
+            }
+            Object.Destroy(TitleCardBack_Obj);
+            Object.Destroy(TitleCardTitle_Obj);
+
+            List<IEnumerator> queuedEnumerators = elevatorScreen.ReflectionGetVariable("queuedEnumerators") as List<IEnumerator>;
+            queuedEnumerators.Clear();
+            elevatorScreen.ReflectionSetVariable("busy", false);
+
+            //elevatorScreen.ReflectionSetVariable("readyToStart", true);
+            //audMan.PlaySingle(AssetFinder.FindOfTypeWithName<SoundObject>("Elv_Buzz", true));
+            //elevatorScreen.UpdateFloorDisplay();
+            //elevatorScreen.ReflectionGetVariable("UpdateLives");
+            //elevatorScreen.StartGame();
+
+            timer = 0f;
+            while (timer < 1f)
+            {
+                Flash.color = new Color(0f, 0f, 0f, 1f - timer);
+                timer += Time.unscaledDeltaTime;
+                yield return null;
+            }
+            Object.Destroy(Flash_Obj);
+
+            yield break;
+        }
         public static void OpeningAnimationsButVoid(Canvas canvas, AudioSource audSource, TMP_Text textBox, MonoBehaviour monoBehaviour)
         {
-            monoBehaviour.StartCoroutine(OpeningAnimations(canvas, audSource, textBox));
+            monoBehaviour.StartCoroutine(OpeningAnimations(canvas, audSource, textBox, monoBehaviour));
+            monoBehaviour.StartCoroutine(Skip(canvas, audSource, textBox, monoBehaviour));
         }
 
-        public static IEnumerator OpeningAnimations(Canvas canvas, AudioSource audSource, TMP_Text textBox)
+        public static IEnumerator Skip(Canvas canvas, AudioSource audSource, TMP_Text textBox, MonoBehaviour monoBehaviour)
+        {
+            while (!(Input.anyKeyDown || Singleton<InputManager>.Instance.GetDigitalInput("MouseSubmit", onDown: true) || Singleton<InputManager>.Instance.GetDigitalInput("Pause", onDown: true) || Singleton<InputManager>.Instance.AnyButton(onDown: true)))
+            {
+                if (openingPlayed)
+                {
+                    yield break;
+                }
+                yield return null;
+            }
+            while (Input.anyKeyDown || Singleton<InputManager>.Instance.GetDigitalInput("MouseSubmit", onDown: true) || Singleton<InputManager>.Instance.GetDigitalInput("Pause", onDown: true) || Singleton<InputManager>.Instance.AnyButton(onDown: true))
+            {
+                if (openingPlayed)
+                {
+                    yield break;
+                }
+                yield return null;
+            }
+            monoBehaviour.StopCoroutine(OpeningAnimations(canvas, audSource, textBox, monoBehaviour));
+            Object.Destroy(OpeningMain.gameObject);
+            Object.Destroy(Border.gameObject);
+            Object.Destroy(whiteFlash.gameObject);
+            openingPlayed = true;
+            textBox.gameObject.SetActive(true);
+            audSource.Stop();
+            audSource.clip = AssetFinder.FindOfTypeWithName<AudioClip>("ErrorScreen", true);
+            audSource.loop = true;
+            audSource.Play();
+
+            yield break;
+        }
+        public static IEnumerator OpeningAnimations(Canvas canvas, AudioSource audSource, TMP_Text textBox, MonoBehaviour monoBehaviour)
         {
             openingPlayed = false;
             audSource.clip = OpeningMusic;
@@ -66,9 +378,9 @@ namespace ItsBaldiTimeRework
             Border.rectTransform.sizeDelta = new Vector2(640f, 520f);
             Border.sprite = Border_Sprite;
 
-            GameObject Flash_Obj = new GameObject("WhiteFlash");
+            GameObject Flash_Obj = new GameObject("Flash");
             Flash_Obj.transform.SetParent(OpeningMain.transform, false);
-            RawImage whiteFlash = Flash_Obj.AddComponent<RawImage>();
+            whiteFlash = Flash_Obj.AddComponent<RawImage>();
             whiteFlash.color = new Color(0f, 0f, 0f, 1f);
             whiteFlash.rectTransform.anchorMin = new Vector2(0f, 0f);
             whiteFlash.rectTransform.anchorMax = new Vector2(1f, 1f);
@@ -473,13 +785,13 @@ namespace ItsBaldiTimeRework
                     Layer[4].rectTransform.anchoredPosition = new Vector2(0f, 0f);
                 }
 
-                if (timer < 4f)
+                if (timer < 3f)
                 {
                     Layer[5].rectTransform.anchoredPosition = new Vector2(0f, -360f);
                 }
-                else if (timer < 5f)
+                else if (timer < 4f)
                 {
-                    float edit = math.sin((timer - 4f) * (math.PI / 2));
+                    float edit = math.sin((timer - 3f) * (math.PI / 2));
                     Layer[5].rectTransform.anchoredPosition = new Vector2(0f, -360f + 360f * edit);
                 }
                 else
@@ -658,6 +970,7 @@ namespace ItsBaldiTimeRework
             whiteFlash.color = new Color(1f, 1f, 1f, 0f);
             Object.Destroy(OpeningMain_Obj);
             Object.Destroy(Border_Obj);
+            Object.Destroy(Flash_Obj);
 
             yield return new WaitForSecondsRealtime(1f);
 
@@ -667,6 +980,7 @@ namespace ItsBaldiTimeRework
             audSource.clip = AssetFinder.FindOfTypeWithName<AudioClip>("ErrorScreen", true);
             audSource.loop = true;
             audSource.Play();
+            monoBehaviour.StopCoroutine(Skip(canvas, audSource, textBox, monoBehaviour));
 
             yield break;
         }

@@ -1,5 +1,6 @@
 ﻿using HarmonyLib;
 using MTM101BaldAPI.Reflection;
+using System.Collections;
 using System.Collections.Generic;
 using Unity.Mathematics;
 using UnityEngine;
@@ -16,6 +17,13 @@ namespace ItsBaldiTimeRework
         public static void BeginPlayPostfix(MainGameManager __instance)
         {
             BaldiTimeActions.Setup(__instance);
+        }
+
+        [HarmonyPatch("CreateHappyBaldi")]
+        [HarmonyPrefix]
+        public static bool CreateHappyBaldiPrefix()
+        {
+            return false;
         }
 
         [HarmonyPatch("AllNotebooks")]
@@ -167,6 +175,13 @@ namespace ItsBaldiTimeRework
             BaldiTimeActions.Update();
         }
 
+        [HarmonyPatch("FinishLevel")]
+        [HarmonyPostfix]
+        public static void FinishLevelPostfix()
+        {
+            ElevatorScreenPatches.death = false;
+        }
+
         [HarmonyPatch("BeginPlay")]
         [HarmonyPostfix]
         public static void BeginPlayPostfix(MainGameManager __instance)
@@ -189,6 +204,8 @@ namespace ItsBaldiTimeRework
     [HarmonyPatch(typeof(ElevatorScreen))]
     public class ElevatorScreenPatches
     {
+        public static bool death = false;
+
         [HarmonyPatch("StartGame")]
         [HarmonyPrefix]
         public static void StartGamePrefix()
@@ -226,6 +243,37 @@ namespace ItsBaldiTimeRework
                 BaldiTimeUI.PointDisplayText.text = "0";
             }
         }
+
+        [HarmonyPatch("Start")]
+        [HarmonyPostfix]
+        public static void StartPostfix(ElevatorScreen __instance)
+        {
+            if (death)
+            {
+                return;
+            }
+            List<IEnumerator> queuedEnumerators = __instance.ReflectionGetVariable("queuedEnumerators") as List<IEnumerator>;
+            AudioManager audMan = __instance.ReflectionGetVariable("audMan") as AudioManager;
+            //Debug.LogWarning("queuedEnumerators.Count = " + queuedEnumerators.Count);
+            if (queuedEnumerators.Count == 2 && BaldiTimeAnimations.TitleCardBackSprites.Count > 0)
+            {
+                //__instance.StopCoroutine("ZoomIntro");
+                //__instance.StopCoroutine("Shut");
+                Singleton<MusicManager>.Instance.StopMidi();
+                //queuedEnumerators.Clear();
+                //CursorInitiator cursorInitiator = __instance.ReflectionGetVariable("cursorInitiator") as CursorInitiator;
+                //cursorInitiator.enabled = true;
+                //__instance.transform.localScale = Vector3.one;
+                //__instance.ReflectionSetVariable("busy", true);
+                BaldiTimeAnimations.TitleCardAnimationsButVoid(__instance.Canvas, audMan, __instance);
+            }
+            else if (queuedEnumerators.Count == 3)
+            {
+                Singleton<MusicManager>.Instance.StopMidi();
+                BaldiTimeAnimations.RankAnimationsButVoid(audMan, __instance);
+            }
+            death = true;
+        }
     }
 
     [HarmonyPatch(typeof(TimeOut))]
@@ -241,7 +289,6 @@ namespace ItsBaldiTimeRework
             }
             if (BaldiTimeActions.lap > 1 || BasePlugin.AssetMan.Get<AudioClip>("Lap1-Outro") == null)
             {
-                Debug.LogWarning("StopMidi");
                 Singleton<MusicManager>.Instance.StopMidi();
             }
         }
@@ -360,6 +407,17 @@ namespace ItsBaldiTimeRework
         public static void Postfix()
         {
             BaldiTimeActions.AddCombo(1f);
+        }
+    }
+
+    [HarmonyPatch(typeof(MainMenu))]
+    public class MainMenuPatch
+    {
+        [HarmonyPatch("Start")]
+        [HarmonyPostfix]
+        public static void Postfix()
+        {
+            ElevatorScreenPatches.death = false;
         }
     }
 

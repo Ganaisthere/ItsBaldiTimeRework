@@ -59,6 +59,7 @@ namespace ItsBaldiTimeRework
         public static SoundObject[] rankup = new SoundObject[5];
         public static SoundObject[] rankdown = new SoundObject[5];
         public static float rankAniTimer = 0f;
+        public static float pointsOld = 0f;
 
 
         public static IEnumerator Flash(BaseGameManager baseGameManager)
@@ -305,7 +306,7 @@ namespace ItsBaldiTimeRework
                             if (numOld < num)
                             {
                                 numOld = num;
-                                Singleton<CoreGameManager>.Instance.audMan.PlaySingle(rankup[math.min(num, rankup.Length)]);
+                                Singleton<CoreGameManager>.Instance.audMan.PlaySingle(rankup[math.min(num, rankup.Length - 1)]);
                             }
                             else
                             {
