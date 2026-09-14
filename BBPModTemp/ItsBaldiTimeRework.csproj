@@ -32,6 +32,9 @@
     <Reference Include="com.unity.multiplayer-hlapi.Runtime">
       <HintPath>..\..\..\..\..\steam\steamapps\common\Baldi's Basic Plus\BALDI_Data\Managed\com.unity.multiplayer-hlapi.Runtime.dll</HintPath>
     </Reference>
+    <Reference Include="CustomMainMenusAPI">
+      <HintPath>..\..\..\..\..\DESKTOP\新建文件夹\CustomMainMenusAPI.dll</HintPath>
+    </Reference>
     <Reference Include="HarmonyXInterop">
       <HintPath>..\..\..\..\..\steam\steamapps\common\Baldi's Basic Plus\BepInEx\core\HarmonyXInterop.dll</HintPath>
     </Reference>
@@ -57,13 +60,13 @@
       <HintPath>..\..\..\..\..\steam\steamapps\common\Baldi's Basic Plus\BepInEx\core\MonoMod.Utils.dll</HintPath>
     </Reference>
     <Reference Include="MTM101BaldAPI">
-      <HintPath>..\..\..\..\..\steam\steamapps\common\Baldi's Basic Plus\BepInEx\plugins\.Base\MTM101BaldAPI.dll</HintPath>
+      <HintPath>..\..\..\..\..\DESKTOP\新建文件夹\MTM101BaldAPI.dll</HintPath>
     </Reference>
     <Reference Include="NavMeshComponents">
       <HintPath>..\..\..\..\..\steam\steamapps\common\Baldi's Basic Plus\BALDI_Data\Managed\NavMeshComponents.dll</HintPath>
     </Reference>
     <Reference Include="Newtonsoft.Json">
-      <HintPath>..\..\..\..\..\steam\steamapps\common\Baldi's Basic Plus\BepInEx\plugins\.Base\Newtonsoft.Json.dll</HintPath>
+      <HintPath>..\..\..\..\..\DESKTOP\新建文件夹\Newtonsoft.Json.dll</HintPath>
     </Reference>
     <Reference Include="Rewired_Core">
       <HintPath>..\..\..\..\..\steam\steamapps\common\Baldi's Basic Plus\BALDI_Data\Managed\Rewired_Core.dll</HintPath>

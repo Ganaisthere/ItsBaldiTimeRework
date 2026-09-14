@@ -296,7 +296,7 @@ namespace ItsBaldiTimeRework
                         {
                             pointsEdit += 5;
                         }
-                        if (math.abs(pointsEdit - BaldiTimeActions.points) < 10)
+                        if (math.abs(pointsEdit - BaldiTimeActions.points) <= 5)
                         {
                             pointsEdit = BaldiTimeActions.points;
                         }

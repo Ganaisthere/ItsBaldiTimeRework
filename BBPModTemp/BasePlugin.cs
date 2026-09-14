@@ -1,4 +1,5 @@
 ﻿using BepInEx;
+using BepInEx.Bootstrap;
 using BepInEx.Configuration;
 using HarmonyLib;
 using MTM101BaldAPI;
@@ -11,11 +12,13 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using UnityEngine;
+using static BepInEx.BepInDependency;
 
 namespace ItsBaldiTimeRework
 {
-    [BepInPlugin("ganaisthere.plus.itsbalditimerework", "Its Baldi Time: Rework", "0.1.0.0")]
+    [BepInPlugin("ganaisthere.plus.itsbalditimerework", "Its Baldi Time: Reworked", "0.1.0.0")]
     [BepInDependency("mtm101.rulerp.bbplus.baldidevapi")]
+    [BepInDependency("pixelguy.pixelmodding.baldiplus.custommainmenusapi", DependencyFlags.SoftDependency)]
 
     public class BasePlugin : BaseUnityPlugin
     {
@@ -58,6 +61,24 @@ namespace ItsBaldiTimeRework
             LoadOpeningAssets();
             LoadingEvents.RegisterOnAssetsLoaded(base.Info, this.LoadAssets(), LoadingEventOrder.Start);
             GeneratorManagement.Register(this, GenerationModType.Addend, AddObjects);
+
+            if (Chainloader.PluginInfos.ContainsKey("pixelguy.pixelmodding.baldiplus.custommainmenusapi"))
+            {
+                AddTexture2D("Menu.png", "Textures/UI");
+                Texture2DToSprite("Menu");
+                CustomMainMenu.sprite = AssetMan.Get<Sprite>("Menu");
+                AddMidi("TitlePEPBRMG.mid", "Midi");
+                CustomMainMenu.Setup();
+            }
+            else
+            {
+                Logger.LogInfo("CustomMainMenusAPI is not installed.");
+                /*Logger.LogInfo("All PluginInfo:");
+                foreach (KeyValuePair<string, PluginInfo> i in Chainloader.PluginInfos)
+                {
+                    Logger.LogInfo(i);
+                }*/
+            }
         }
 
         private void LoadOpeningAssets()
@@ -626,6 +647,19 @@ namespace ItsBaldiTimeRework
             string getfile = getfiles[0];
             AssetMan.Add(Path.GetFileNameWithoutExtension(getfile), AssetLoader.AudioClipFromFile(getfile));
         }
+        private void AddMidi(string fileNameWithExtension, string chlidPath, bool must = true)
+        {
+            string[] getfiles = Directory.GetFiles(AssetLoader.GetModPath(this) + "/" + chlidPath + "/", fileNameWithExtension);
+            if (getfiles.Length <= 0)
+            {
+                if (must)
+                {
+                    Debug.LogError("File not found: " + AssetLoader.GetModPath(this) + "/" + chlidPath + "/" + fileNameWithExtension);
+                }
+                return;
+            }
+            AssetLoader.MidiFromFile(getfiles[0], Path.GetFileNameWithoutExtension(getfiles[0]));
+        }
         /*
         //---------------------------------------------------------------------
         private void QuickAddAudioClip(string audioClipNameWithExtension)
@@ -655,11 +689,6 @@ namespace ItsBaldiTimeRework
         private void QuickAddMidi(string midiNameWithExtension)
         {
             string getfile = Directory.GetFiles(AssetLoader.GetModPath(this), midiNameWithExtension)[0];
-            AssetLoader.MidiFromFile(getfile, Path.GetFileNameWithoutExtension(getfile));
-        }
-        private void QuickAddMidi(string midiNameWithExtension, string chlidPath)
-        {
-            string getfile = Directory.GetFiles(AssetLoader.GetModPath(this) + "/" + chlidPath + "/", midiNameWithExtension)[0];
             AssetLoader.MidiFromFile(getfile, Path.GetFileNameWithoutExtension(getfile));
         }*/
     }
