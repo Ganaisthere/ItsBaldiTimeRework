@@ -17,14 +17,15 @@ namespace ItsBaldiTimeRework
             audioSource1.spatialBlend = 0f;
             audioSource1.ignoreListenerPause = false;
             audioSource1.volume = 1f;
+            audioSource1.ignoreListenerVolume = false;
             audioSource2.playOnAwake = false;
             audioSource2.spatialBlend = 0f;
             audioSource2.ignoreListenerPause = false;
             audioSource2.volume = 1f;
+            audioSource2.ignoreListenerVolume = false;
         }
-        public void Play(string clipName, bool isLoop = false, bool fade = false)
+        public void Play(AudioClip audioClip, bool isLoop = false, bool fade = false)
         {
-            AudioClip audioClip = BasePlugin.AssetMan.Get<AudioClip>(clipName);
             if (audioClip != null)
             {
                 if (fade)
@@ -54,15 +55,9 @@ namespace ItsBaldiTimeRework
                     PlayAudioClip(audioClip, isLoop, audioSource1);
                 }
             }
-            else
-            {
-                Debug.LogWarning("Oh Fxxk Where Is - " + clipName + " - I Can't Find It");
-            }
         }
-        public void Queue(string clipName1, string clipName2, bool fade = false)
+        public void Queue(AudioClip audioClip1, AudioClip audioClip2, bool fade = false)
         {
-            AudioClip audioClip1 = BasePlugin.AssetMan.Get<AudioClip>(clipName1);
-            AudioClip audioClip2 = BasePlugin.AssetMan.Get<AudioClip>(clipName2);
             if (audioClip1 != null && audioClip2 != null)
             {
                 if (fade)
@@ -91,13 +86,6 @@ namespace ItsBaldiTimeRework
                     StartCoroutine(QueueAction(audioClip1, audioClip2, audioSource1));
                 }
             }
-            else
-            {
-                if (audioClip1 == null)
-                    Debug.LogWarning("Oh Fxxk Where Is - " + clipName1 + " - I Can't Find It");
-                if (audioClip2 == null)
-                    Debug.LogWarning("Oh Fxxk Where Is - " + clipName2 + " - I Can't Find It");
-            }
         }
         public void Stop(bool instant = true)
         {
@@ -118,7 +106,7 @@ namespace ItsBaldiTimeRework
             AudioClip audioClip = BasePlugin.AssetMan.Get<AudioClip>("Meatophobia");
             PlayerManager player = Singleton<CoreGameManager>.Instance.GetPlayer(0);
             SpriteRenderer spriteRenderer = notebook.ReflectionGetVariable("sprite") as SpriteRenderer;
-            spriteRenderer.sprite = BaldiTimeActions.Notebook_John;
+            spriteRenderer.sprite = BasePlugin.AssetMan.Get<Sprite>("Notebook_John");
             if (audioClip == null)
             {
                 Debug.LogWarning("Oh Fxxk Where Is - Meatophobia - I Can't Find It");

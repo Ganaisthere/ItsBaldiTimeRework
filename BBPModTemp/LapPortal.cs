@@ -9,13 +9,10 @@ namespace ItsBaldiTimeRework
     public class LapPortal : NPC
     {
         public Sprite[] sprites = new Sprite[2];
-        public SoundObject Sfx_Enter;
-        public SoundObject Sfx_Exit;
-        public SoundObject Sfx_Lapping;
         public override void Initialize()
         {
             base.Initialize();
-            spriteRenderer[0].sprite = sprites[0];
+            spriteRenderer[0].sprite = BasePlugin.AssetMan.Get<Sprite>("LapPortal_0");
             behaviorStateMachine.ChangeState(new LapPortal_WaitForPlayerTouch(this));
         }
     }
@@ -43,11 +40,11 @@ namespace ItsBaldiTimeRework
             base.Update();
             if (BaldiTimeActions.lap > 0 && BaldiTimeActions.lap < 2 && BaldiTimeActions.itsBaldiTime && Singleton<BaseGameManager>.Instance.FoundNotebooks >= Singleton<BaseGameManager>.Instance.Ec.notebookTotal)
             {
-                lapPortal.spriteRenderer[0].sprite = lapPortal.sprites[1];
+                lapPortal.spriteRenderer[0].sprite = BasePlugin.AssetMan.Get<Sprite>("LapPortal_1");
             }
             else
             {
-                lapPortal.spriteRenderer[0].sprite = lapPortal.sprites[0];
+                lapPortal.spriteRenderer[0].sprite = BasePlugin.AssetMan.Get<Sprite>("LapPortal_0");
             }
             if (!Singleton<CoreGameManager>.Instance.GetPlayer(0).ec.map.arrowTargets.Contains(lapPortal.Entity))
             {
@@ -81,7 +78,7 @@ namespace ItsBaldiTimeRework
             Singleton<BaseGameManager>.Instance.Ec.PauseEnvironment(true);
             Singleton<CoreGameManager>.Instance.GetPlayer(0).plm.Entity.SetFrozen(true);
 
-            Singleton<CoreGameManager>.Instance.audMan.PlaySingle(lapportal.Sfx_Enter);
+            Singleton<CoreGameManager>.Instance.audMan.PlaySingle(BasePlugin.AssetMan.Get<SoundObject>("sfx_lapenter"));
 
             float timer = 0f;
             while (timer < 1f)
@@ -118,7 +115,7 @@ namespace ItsBaldiTimeRework
             }
 
             yield return new WaitForSeconds(0.5f);
-            Singleton<CoreGameManager>.Instance.audMan.PlaySingle(lapportal.Sfx_Exit);
+            Singleton<CoreGameManager>.Instance.audMan.PlaySingle(BasePlugin.AssetMan.Get<SoundObject>("sfx_lapexit"));
 
             timer = 0f;
             while (timer < 1f)
@@ -136,7 +133,7 @@ namespace ItsBaldiTimeRework
             Singleton<BaseGameManager>.Instance.Ec.PauseEnvironment(false);
             Singleton<CoreGameManager>.Instance.GetPlayer(0).plm.Entity.SetFrozen(false);
 
-            BaldiTimeActions.Lapping(Singleton<BaseGameManager>.Instance, lapportal.Sfx_Lapping);
+            BaldiTimeActions.Lapping(Singleton<BaseGameManager>.Instance, BasePlugin.AssetMan.Get<SoundObject>("Lapping"));
 
             yield break;
         }

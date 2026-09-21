@@ -1,5 +1,4 @@
-﻿using HarmonyLib;
-using MTM101BaldAPI.Reflection;
+﻿using MTM101BaldAPI.Reflection;
 using System.Collections;
 using System.Collections.Generic;
 using TMPro;
@@ -12,54 +11,34 @@ namespace ItsBaldiTimeRework
     public class BaldiTimeUI
     {
         public static TMP_Text notebookText = null;
-        public static Sprite[] baldiTimeLogoSprites = new Sprite[2];
         public static RawImage TimerBar;
         public static Image TimerBarOverlay;
         public static Image TimerBarBackground;
         public static Image TimerBarNiddle;
         public static TMP_Text TimerBarTextShadow;
         public static TMP_Text TimerBarText;
-        public static Sprite[] TimerBarSprites = new Sprite[3];
         public static RawImage PointDisplay;
         //public static Image PointDisplayBackground;
         public static TMP_Text PointDisplayText;
-        public static Image RankBackground;
-        public static Image RankColor;
+        public static Image RankImage;
+        //public static Image RankColor;
+        public static RawImage RankOverlayMask;
         public static Image RankOverlay;
         //public static Sprite PointDisplayBackgroundSprite;
-        public static Sprite RankBackgroundSprite;
-        public static Sprite[] RankColorSprites = new Sprite[31];
-        public static Sprite[] RankOverlaySprites = new Sprite[7];
-        public static Color[] RankColors = new Color[7]
-        {
-            new Color(0f, 0.2f, 0.2f, 1f),
-            new Color(0f, 1f, 0f, 1f),
-            new Color(0f, 0.5f, 1f, 1f),
-            new Color(1f, 0f, 0f, 1f),
-            new Color(1f, 0.8f, 0f, 1f),
-            new Color(0.6f, 0f, 1f, 1f),
-            new Color(0f, 1f, 1f, 1f)
-        };
-        public static float PointDisplayOffset = 0f;
-        public static Sprite[] ComboBarSprites = new Sprite[3];
+        public static Sprite RankDSprite;
         public static RawImage ComboBar;
         public static Image ComboBarOverlay;
         public static Image ComboBarBackground;
         public static Image ComboBarNiddle;
         public static TMP_Text ComboTextShadow;
         public static TMP_Text ComboText;
-        public static float ComboBarOffset = 0f;
+        public static float ComboBarOffset = -70f;
         public static float pointsEdit = 0f;
         public static float ComboBarTimer = 0f;
         public static float ComboTimerEdit = 0f;
-        public static Sprite[] LapFlagSprites = new Sprite[7];
-        public static List<Sprite> ComboLevelsSprites = new List<Sprite>();
-        public static SoundObject[] comboup = new SoundObject[3];
+        public static List<Sprite> AllComboLevels = new List<Sprite>();
         public static int numOld = 0;
-        public static SoundObject[] rankup = new SoundObject[5];
-        public static SoundObject[] rankdown = new SoundObject[5];
         public static float rankAniTimer = 0f;
-        public static float pointsOld = 0f;
 
 
         public static IEnumerator Flash(BaseGameManager baseGameManager)
@@ -131,7 +110,7 @@ namespace ItsBaldiTimeRework
                 GameObject baldiTimeLogo_Obj = new GameObject("BaldiTimeLogo");
                 baldiTimeLogo_Obj.transform.SetParent(hudManager.Canvas().transform, false);
                 Image baldiTimeLogoImage = baldiTimeLogo_Obj.AddComponent<Image>();
-                baldiTimeLogoImage.sprite = baldiTimeLogoSprites[0];
+                baldiTimeLogoImage.sprite = BasePlugin.AssetMan.Get<Sprite>("BaldiTimeLogo_0");
                 baldiTimeLogoImage.rectTransform.sizeDelta = new Vector2(250f, 200f);
                 baldiTimeLogoImage.rectTransform.anchorMin = new Vector2(0.5f, -0.5f);
                 baldiTimeLogoImage.rectTransform.anchorMax = new Vector2(0.5f, -0.5f);
@@ -165,12 +144,13 @@ namespace ItsBaldiTimeRework
                         if (frame == 0)
                         {
                             frame = 1;
+                            baldiTimeLogoImage.sprite = BasePlugin.AssetMan.Get<Sprite>("BaldiTimeLogo_0");
                         }
                         else
                         {
                             frame = 0;
+                            baldiTimeLogoImage.sprite = BasePlugin.AssetMan.Get<Sprite>("BaldiTimeLogo_1");
                         }
-                        baldiTimeLogoImage.sprite = baldiTimeLogoSprites[frame];
                     }
                     timer += Time.deltaTime * Time.timeScale;
                     yield return null;
@@ -206,7 +186,7 @@ namespace ItsBaldiTimeRework
                 LapFlag.rectTransform.anchorMin = new Vector2(0.5f, 1f);
                 LapFlag.rectTransform.sizeDelta = new Vector2(190f, 90f);
                 LapFlag.rectTransform.pivot = new Vector2(0.5f, 0f);
-                LapFlag.sprite = LapFlagSprites[BaldiTimeActions.lap - 2];
+                LapFlag.sprite = BasePlugin.AssetMan.Get<Sprite>("Lap" + BaldiTimeActions.lap.ToString() + "Flag");//LapFlagSprites[BaldiTimeActions.lap - 2];
 
                 float timer = 0f;
                 while (timer < 2f)
@@ -230,16 +210,20 @@ namespace ItsBaldiTimeRework
         {
             if (TimerBarBackground != null)
             {
+                //TimerBar
                 float fillAmount = 1f - (BaldiTimeActions.pizzaTimer / BaldiTimeActions.pizzaTimerTotal);
                 TimerBarBackground.rectTransform.localScale = new Vector3(fillAmount, 1f, 1f);
                 TimerBarNiddle.rectTransform.anchoredPosition = new Vector2(-121f + 242f * fillAmount, TimerBarNiddle.rectTransform.anchoredPosition.y);
                 TimerBarNiddle.rectTransform.localScale = new Vector3(1f + 0.25f * math.sin(BaldiTimeActions.pizzaTimer * math.PI), 1f + 0.25f * math.sin((BaldiTimeActions.pizzaTimer + math.PI) * math.PI), 1f);
                 TimerBarTextShadow.text = string.Format("{0}:{1}", Mathf.Floor(BaldiTimeActions.pizzaTimer / 60).ToString("0"), (BaldiTimeActions.pizzaTimer % 60).ToString("00"));
                 TimerBarText.text = TimerBarTextShadow.text;
+
+                //Rank And PointDisplay
                 if (Singleton<BaseGameManager>.Instance != null)
                 {
                     if (!Singleton<BaseGameManager>.Instance.InPitstop() && Singleton<BaseGameManager>.Instance.GameReady)
                     {
+                        //Rank
                         int num = 0;
                         float fill = 1f;
                         if (BaldiTimeActions.points + BaldiTimeActions.comboPoints >= BaldiTimeActions.pointsForPRank)
@@ -272,22 +256,48 @@ namespace ItsBaldiTimeRework
                         {
                             fill = (BaldiTimeActions.points + BaldiTimeActions.comboPoints) / (BaldiTimeActions.pointsForPRank / 8f);
                         }
-                        for (float i = 0f; i < 31f; i++)
-                        {
-                            if (fill >= i * (1f / 31f) && fill < (i + 1f) * (1f / 31f))
-                            {
-                                RankColor.sprite = RankColorSprites[(int)i];
-                                break;
-                            }
-                        }
+
                         BaldiTimeActions.rank = BaldiTimeActions.ranks[num];
-                        RankBackground.color = RankColors[num];
-                        RankColor.color = new Color(0f, 0f, 0f, 0f);
-                        if (num < 4)
+
+                        RankOverlayMask.rectTransform.anchoredPosition = new Vector2(0f, -48f + fill * 48f);
+                        RankOverlay.rectTransform.anchoredPosition = new Vector2(0f, 48f - fill * 48f);
+                        RankImage.sprite = BasePlugin.AssetMan.Get<Sprite>("Rank_" + BaldiTimeActions.rank + "_0");//RankSprites0[num];
+                        if (num > 3)
                         {
-                            RankColor.color = RankColors[num + 1];
+                            RankOverlay.color = new Color(0f, 0f, 0f, 0f);
                         }
-                        RankOverlay.sprite = RankOverlaySprites[num];
+                        else
+                        {
+                            RankOverlay.sprite = BasePlugin.AssetMan.Get<Sprite>("Rank_" + BaldiTimeActions.rank + "_1");
+                            RankOverlay.color = new Color(1f, 1f, 1f, 1f);
+                        }
+
+                        if (numOld != num)
+                        {
+                            if (numOld < num)
+                            {
+                                numOld = num;
+                                Singleton<CoreGameManager>.Instance.audMan.PlaySingle(BasePlugin.AssetMan.Get<SoundObject>("rankup" + (math.min(num, 4) + 1).ToString())); //rankup[math.min(num, rankup.Length - 1)]);
+                            }
+                            else
+                            {
+                                numOld = num;
+                                Singleton<CoreGameManager>.Instance.audMan.PlaySingle(BasePlugin.AssetMan.Get<SoundObject>("rankdown" + (math.max(num, 0) + 1).ToString())); //rankdown[math.max(num, 0)]);
+                            }
+                            rankAniTimer = 0.5f;
+                        }
+                        if (rankAniTimer > 0f)
+                        {
+                            float mun = math.sin(rankAniTimer * math.PI);
+                            RankImage.rectTransform.localScale = new Vector3(1f + mun, 1f + mun, 1f + mun);
+                            rankAniTimer -= Time.deltaTime;
+                        }
+                        else
+                        {
+                            RankImage.rectTransform.localScale = Vector3.one;
+                        }
+
+                        //PointDisplay
                         if (pointsEdit > BaldiTimeActions.points)
                         {
                             pointsEdit -= 5;
@@ -301,30 +311,6 @@ namespace ItsBaldiTimeRework
                             pointsEdit = BaldiTimeActions.points;
                         }
                         PointDisplayText.text = pointsEdit.ToString();
-                        if (numOld != num)
-                        {
-                            if (numOld < num)
-                            {
-                                numOld = num;
-                                Singleton<CoreGameManager>.Instance.audMan.PlaySingle(rankup[math.min(num, rankup.Length - 1)]);
-                            }
-                            else
-                            {
-                                numOld = num;
-                                Singleton<CoreGameManager>.Instance.audMan.PlaySingle(rankdown[math.max(num, 0)]);
-                            }
-                            rankAniTimer = 0.5f;
-                        }
-                        if (rankAniTimer > 0f)
-                        {
-                            float mun = math.sin(rankAniTimer * math.PI);
-                            RankBackground.rectTransform.localScale = new Vector3(1f + mun, 1f + mun, 1f + mun);
-                            rankAniTimer -= Time.deltaTime;
-                        }
-                        else
-                        {
-                            RankBackground.rectTransform.localScale = Vector3.one;
-                        }
                     }
                 }
                 //----------------------------------------------------------------------
@@ -344,14 +330,15 @@ namespace ItsBaldiTimeRework
                         ComboBarTimer = 0f;
                     }
                 }
-                ComboBarOffset = 256f * (1f - math.sin(ComboBarTimer * math.PI / 2f));
+                ComboBarOffset = 200f * (1f - math.sin(ComboBarTimer * math.PI / 2f));
                 //----------------------------------------------------------------------
                 if (notebookText != null)
                 {
-                    float pointDisplayXFix = notebookText.GetComponent<RectTransform>().anchoredPosition.x - 50f;
-                    float ComboBarXFix = hudManager.inventory.rectTransform.anchoredPosition.x - 160f;
-                    PointDisplay.rectTransform.anchoredPosition = new Vector2(-80f - pointDisplayXFix + PointDisplayOffset, PointDisplay.rectTransform.anchoredPosition.y);
-                    ComboBar.rectTransform.anchoredPosition = new Vector2(-96f - ComboBarXFix + ComboBarOffset, ComboBar.rectTransform.anchoredPosition.y);
+                    ComboBar.rectTransform.anchoredPosition = new Vector2(ComboBarOffset + 16f, ComboBar.rectTransform.anchoredPosition.y);
+                    /*float pointDisplayXFix = 0f;//notebookText.GetComponent<RectTransform>().anchoredPosition.x - 50f;
+                    float ComboBarXFix = 0f;// hudManager.inventory.rectTransform.anchoredPosition.x - 160f;
+                    PointDisplay.rectTransform.anchoredPosition = new Vector2(PointDisplayOffset - pointDisplayXFix, PointDisplay.rectTransform.anchoredPosition.y);
+                    ComboBar.rectTransform.anchoredPosition = new Vector2(ComboBarOffset - ComboBarXFix, ComboBar.rectTransform.anchoredPosition.y);*/
                 }
                 //----------------------------------------------------------------------
                 ComboTextShadow.text = BaldiTimeActions.combo.ToString() + " Combo!";
@@ -377,20 +364,25 @@ namespace ItsBaldiTimeRework
                 }
                 ComboBarNiddle.rectTransform.anchoredPosition = new Vector2(math.round(-183f + 143f * ComboTimerEdit), ComboBarNiddle.rectTransform.anchoredPosition.y);
             }
+            if (BasePlugin.IsRaldiTweaksInstalled)
+            {
+                RaldiTweaksSupport.ChangeColor();
+            }
         }
         public static IEnumerator ShowComboLevels(BaseGameManager baseGameManager)
         {
+            if (AllComboLevels.Count <= 0)
+            {
+                yield break;
+            }
             GameObject ComboLevels_Obj = new GameObject("ComboLevels");
             ComboLevels_Obj.transform.SetParent(ComboBar.transform, false);
             Image ComboLevels = ComboLevels_Obj.AddComponent<Image>();
             ComboLevels.rectTransform.sizeDelta = new Vector2(160f, 96f);
             ComboLevels.rectTransform.anchoredPosition = new Vector2(88f, -96f);//-112f
-            if (ComboLevelsSprites.Count > 0)
-            {
-                ComboLevels.sprite = ComboLevelsSprites[UnityEngine.Random.Range(0, ComboLevelsSprites.Count - 1)];
-            }
-            int num = UnityEngine.Random.Range(0, comboup.Length - 1);
-            Singleton<CoreGameManager>.Instance.audMan.PlaySingle(comboup[num]);
+            ComboLevels.sprite = AllComboLevels[UnityEngine.Random.Range(0, AllComboLevels.Count - 1)];
+            int num = UnityEngine.Random.Range(1, 3);
+            Singleton<CoreGameManager>.Instance.audMan.PlaySingle(BasePlugin.AssetMan.Get<SoundObject>("comboup" + num.ToString()));
 
             float timer = 0f;
             while (timer < 3f)
@@ -422,7 +414,7 @@ namespace ItsBaldiTimeRework
             GameObject TimerBarBackground_Obj = new GameObject("TimerBarBackground");
             TimerBarBackground_Obj.transform.SetParent(TimerBar.transform, false);
             TimerBarBackground = TimerBarBackground_Obj.AddComponent<Image>();
-            TimerBarBackground.sprite = TimerBarSprites[1];
+            TimerBarBackground.sprite = BasePlugin.AssetMan.Get<Sprite>("TimerBar_1");
             TimerBarBackground.rectTransform.sizeDelta = new Vector2(242f, 18f);
             TimerBarBackground.rectTransform.pivot = new Vector2(0f, 0.5f);
             TimerBarBackground.rectTransform.anchoredPosition = new Vector2(-121f, 0f);
@@ -430,13 +422,17 @@ namespace ItsBaldiTimeRework
             GameObject TimerBarOverlay_Obj = new GameObject("TimerBarOverlay");
             TimerBarOverlay_Obj.transform.SetParent(TimerBar.transform, false);
             TimerBarOverlay = TimerBarOverlay_Obj.AddComponent<Image>();
-            TimerBarOverlay.sprite = TimerBarSprites[0];
+            TimerBarOverlay.sprite = BasePlugin.AssetMan.Get<Sprite>("TimerBar_0");
+            if (BasePlugin.IsRaldiTweaksInstalled)
+            {
+                TimerBarOverlay.sprite = BasePlugin.AssetMan.Get<Sprite>("TimerBar_3");
+            }
             TimerBarOverlay.rectTransform.sizeDelta = new Vector2(256f, 32f);
 
             GameObject TimerBarNiddle_Obj = new GameObject("TimerBarNiddle");
             TimerBarNiddle_Obj.transform.SetParent(TimerBar.transform, false);
             TimerBarNiddle = TimerBarNiddle_Obj.AddComponent<Image>();
-            TimerBarNiddle.sprite = TimerBarSprites[2];
+            TimerBarNiddle.sprite = BasePlugin.AssetMan.Get<Sprite>("TimerBar_2");
             TimerBarNiddle.rectTransform.sizeDelta = new Vector2(32f, 32f);
 
             GameObject TimerBarTextShadow_Obj = new GameObject("TimerBarTextShadow");
@@ -457,12 +453,13 @@ namespace ItsBaldiTimeRework
             TimerBarText.color = Color.white;
 
             GameObject PointDisplay_Obj = new GameObject("PointDisplay");
-            PointDisplay_Obj.transform.SetParent(notebookText.transform, false);
+            PointDisplay_Obj.transform.SetParent(hudManager.Canvas().transform, false);
             PointDisplay = PointDisplay_Obj.AddComponent<RawImage>();
             PointDisplay.color = new Color(0f, 0f, 0f, 0f);
-            PointDisplay.rectTransform.anchoredPosition = new Vector2(-80f, -45f);
-            PointDisplay.rectTransform.anchorMax = new Vector2(0f, 0.5f);
-            PointDisplay.rectTransform.anchorMin = new Vector2(0f, 0.5f);
+            PointDisplay.rectTransform.anchoredPosition = new Vector2(0f, -76f);
+            PointDisplay.rectTransform.anchorMax = new Vector2(0f, 1f);
+            PointDisplay.rectTransform.anchorMin = new Vector2(0f, 1f);
+            PointDisplay.transform.SetAsFirstSibling();
 
             /*GameObject PointDisplayBackground_Obj = new GameObject("PointDisplayBackground");
             PointDisplayBackground_Obj.transform.SetParent(PointDisplay.transform, false);
@@ -475,56 +472,68 @@ namespace ItsBaldiTimeRework
             PointDisplayText_Obj.transform.SetParent(PointDisplay.transform, false);
             PointDisplayText = PointDisplayText_Obj.AddComponent<TextMeshProUGUI>();
             PointDisplayText.fontSize = 24f;
+            //PointDisplayText.font = AssetFinder.FindOfTypeWithName<TMP_FontAsset>("COMIC_36_Pro", false);
             PointDisplayText.alignment = TextAlignmentOptions.Left;
             PointDisplayText.color = Color.black;
             PointDisplayText.rectTransform.sizeDelta = new Vector2(256f, 32f);
-            PointDisplayText.rectTransform.anchoredPosition = new Vector2(70f, 0f);
+            PointDisplayText.rectTransform.anchoredPosition = new Vector2(48f, 8f);
             PointDisplayText.rectTransform.pivot = new Vector2(0f, 0.5f);
             PointDisplayText.text = "0";
 
-            GameObject RankBackground_Obj = new GameObject("RankBackground");
-            RankBackground_Obj.transform.SetParent(PointDisplay.transform, false);
-            RankBackground = RankBackground_Obj.AddComponent<Image>();
-            RankBackground.sprite = RankBackgroundSprite;
-            RankBackground.rectTransform.sizeDelta = new Vector2(32f, 32f);
-            RankBackground.rectTransform.anchoredPosition = new Vector2(50f, 0f);
+            GameObject RankImage_Obj = new GameObject("RankImage");
+            RankImage_Obj.transform.SetParent(PointDisplay.transform, false);
+            RankImage = RankImage_Obj.AddComponent<Image>();
+            RankImage.sprite = RankDSprite;
+            RankImage.rectTransform.sizeDelta = new Vector2(36f, 36f);
+            RankImage.rectTransform.anchoredPosition = new Vector2(24f, 8f);
 
-            GameObject RankColor_Obj = new GameObject("RankColor");
-            RankColor_Obj.transform.SetParent(RankBackground.transform, false);
-            RankColor = RankColor_Obj.AddComponent<Image>();
-            RankColor.sprite = RankColorSprites[0];
-            RankColor.rectTransform.sizeDelta = new Vector2(32f, 32f);
+            GameObject RankOverlayMask_Obj = new GameObject("RankOverlayMask");
+            RankOverlayMask_Obj.transform.SetParent(RankImage.transform, false);
+            RankOverlayMask = RankOverlayMask_Obj.AddComponent<RawImage>();
+            RankOverlayMask.rectTransform.sizeDelta = RankImage.rectTransform.sizeDelta;
+            RankOverlayMask.rectTransform.anchoredPosition = new Vector2(0f, -48f);
+            Mask mask = RankOverlayMask_Obj.AddComponent<Mask>();
+            mask.showMaskGraphic = false;
 
             GameObject RankOverlay_Obj = new GameObject("RankOverlay");
-            RankOverlay_Obj.transform.SetParent(RankBackground.transform, false);
+            RankOverlay_Obj.transform.SetParent(RankOverlayMask.transform, false);
             RankOverlay = RankOverlay_Obj.AddComponent<Image>();
-            RankOverlay.sprite = RankOverlaySprites[0];
-            RankOverlay.rectTransform.sizeDelta = new Vector2(32f, 32f);
+            RankOverlay.sprite = RankDSprite;
+            RankOverlay.rectTransform.sizeDelta = RankImage.rectTransform.sizeDelta;
+            RankOverlay.rectTransform.anchoredPosition = new Vector2(0f, 48f);
+            RankOverlay.maskable = true;
 
             GameObject ComboBar_Obj = new GameObject("ComboBar");
-            ComboBar_Obj.transform.SetParent(hudManager.inventory.transform, false);
+            ComboBar_Obj.transform.SetParent(hudManager.Canvas().transform, false);
             ComboBar = ComboBar_Obj.AddComponent<RawImage>();
             ComboBar.color = new Color(0f, 0f, 0f, 0f);
-            ComboBar.rectTransform.anchoredPosition = new Vector2(96f, -60f);
+            ComboBar.rectTransform.anchoredPosition = new Vector2(ComboBarOffset, -120f);
+            ComboBar.rectTransform.anchorMax = new Vector2(1f, 1f);
+            ComboBar.rectTransform.anchorMin = new Vector2(1f, 1f);
+            ComboBar.transform.SetAsFirstSibling();
 
             GameObject ComboBarBackground_Obj = new GameObject("ComboBarBackground");
             ComboBarBackground_Obj.transform.SetParent(ComboBar.transform, false);
             ComboBarBackground = ComboBarBackground_Obj.AddComponent<Image>();
-            ComboBarBackground.sprite = ComboBarSprites[1];
+            ComboBarBackground.sprite = BasePlugin.AssetMan.Get<Sprite>("ComboDisplay_1");
             ComboBarBackground.rectTransform.sizeDelta = new Vector2(160f, 32f);
             ComboBarBackground.rectTransform.anchoredPosition = new Vector2(-112f, 16f);
 
             GameObject ComboBarNiddle_Obj = new GameObject("ComboBarNiddle");
             ComboBarNiddle_Obj.transform.SetParent(ComboBar.transform, false);
             ComboBarNiddle = ComboBarNiddle_Obj.AddComponent<Image>();
-            ComboBarNiddle.sprite = ComboBarSprites[2];
+            ComboBarNiddle.sprite = BasePlugin.AssetMan.Get<Sprite>("ComboDisplay_2");
             ComboBarNiddle.rectTransform.sizeDelta = new Vector2(32f, 32f);
             ComboBarNiddle.rectTransform.anchoredPosition = new Vector2(-183f, 16f);
 
             GameObject ComboBarOverlay_Obj = new GameObject("ComboBarOverlay");
             ComboBarOverlay_Obj.transform.SetParent(ComboBar.transform, false);
             ComboBarOverlay = ComboBarOverlay_Obj.AddComponent<Image>();
-            ComboBarOverlay.sprite = ComboBarSprites[0];
+            ComboBarOverlay.sprite = BasePlugin.AssetMan.Get<Sprite>("ComboDisplay_0");
+            if (BasePlugin.IsRaldiTweaksInstalled)
+            {
+                ComboBarOverlay.sprite = BasePlugin.AssetMan.Get<Sprite>("ComboDisplay_3");
+            }
             ComboBarOverlay.rectTransform.sizeDelta = new Vector2(192f, 64f);
             ComboBarOverlay.rectTransform.anchoredPosition = new Vector2(-96f, 0f);
 

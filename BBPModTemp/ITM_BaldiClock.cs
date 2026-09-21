@@ -12,6 +12,7 @@ namespace ItsBaldiTimeRework
         {
             Singleton<CoreGameManager>.Instance.AddPoints(pointValue, pm.playerNumber, true, true, true);
             pm.plm.AddStamina(staminaValue, true);
+            BaldiTimeActions.AddCombo(0f, 1.5f);
             return true;
         }
     }

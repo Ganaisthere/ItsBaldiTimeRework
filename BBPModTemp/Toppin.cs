@@ -1,4 +1,5 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using Unity.Mathematics;
 using UnityEngine;
 
@@ -20,7 +21,7 @@ namespace ItsBaldiTimeRework
             navigator.SetRoomAvoidance(false);
             intSprite = 0;
             isSaved = false;
-            spriteRenderer[0].sprite = CageSprite;
+            spriteRenderer[0].sprite = BasePlugin.AssetMan.Get<Sprite>("ToppinsCage");
             this.Navigator.passableObstacles.Add(PassableObstacle.LockedDoor);
             this.Navigator.passableObstacles.Add(PassableObstacle.Bully);
             behaviorStateMachine.ChangeState(new Toppin_WaitForPlayerPickup(this));
@@ -93,15 +94,15 @@ namespace ItsBaldiTimeRework
             toppin.intSprite = BaldiTimeActions.toppins.Count;
             if (toppin.intSprite < 5)
             {
-                toppin.spriteRenderer[0].sprite = toppin.YaySprite[toppin.intSprite];
+                toppin.spriteRenderer[0].sprite = BasePlugin.AssetMan.Get<Sprite>("Toppins_"+ toppin.intSprite.ToString() + "_Yay");
             }
             else
             {
                 int num = UnityEngine.Random.Range(0, 4);
-                toppin.spriteRenderer[0].sprite = toppin.YaySprite[num];
+                toppin.spriteRenderer[0].sprite = BasePlugin.AssetMan.Get<Sprite>("Toppins_" + num.ToString() + "_Yay");
             }
             BaldiTimeActions.toppins.Add(toppin);
-            Singleton<CoreGameManager>.Instance.audMan.PlaySingle(toppin.SFX_Get);
+            Singleton<CoreGameManager>.Instance.audMan.PlaySingle(BasePlugin.AssetMan.Get<SoundObject>("sfx_collecttoppin"));
 
             toppin.StartCoroutine(SaveAnimations(toppin));
         }
@@ -115,7 +116,7 @@ namespace ItsBaldiTimeRework
                 timer += Time.deltaTime;
                 yield return null;
             }
-            toppin.spriteRenderer[0].sprite = toppin.IdleSprite[base.toppin.intSprite];
+            toppin.spriteRenderer[0].sprite = BasePlugin.AssetMan.Get<Sprite>("Toppins_" + base.toppin.intSprite.ToString() + "_Idle"); //toppin.IdleSprite[base.toppin.intSprite];
             if (!BasePlugin.Instance.ConfigShowToppins.Value)
             {
                 toppin.Despawn();

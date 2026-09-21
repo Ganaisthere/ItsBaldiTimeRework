@@ -5,7 +5,6 @@ using System.Collections.Generic;
 using TMPro;
 using Unity.Mathematics;
 using UnityEngine;
-using UnityEngine.SocialPlatforms;
 using UnityEngine.UI;
 
 namespace ItsBaldiTimeRework
@@ -39,11 +38,6 @@ namespace ItsBaldiTimeRework
         public static List<Sprite> TitleCardBackSprites = new List<Sprite>();
         public static List<Sprite> TitleCardTitleSprites = new List<Sprite>();
         public static List<SoundObject> TitleCardSounds = new List<SoundObject>();
-        //-----------------------------------------------------
-        public static Sprite StudentSprite;
-        public static Sprite[] StudentSprites = new Sprite[7];
-        public static SoundObject[] RankSounds = new SoundObject[7];
-        public static Sprite[] RankSprites = new Sprite[7];
 
         public static void RankAnimationsButVoid(AudioManager audMan, ElevatorScreen elevatorScreen)
         {
@@ -79,7 +73,7 @@ namespace ItsBaldiTimeRework
             Image Student = Student_Obj.AddComponent<Image>();
             Student.rectTransform.sizeDelta = new Vector2(480f, 360f);
             Student.rectTransform.anchoredPosition = new Vector2(960f, 0f);
-            Student.sprite = StudentSprite;
+            Student.sprite = BasePlugin.AssetMan.Get<Sprite>("RankAnime_Student_0");
             Student.color = Color.white;
 
             GameObject Border_L_Obj = new GameObject("Border_L");
@@ -96,8 +90,8 @@ namespace ItsBaldiTimeRework
             Border_R.rectTransform.anchoredPosition = new Vector2(480f, 0f);
             Border_R.color = Color.black;//95874046
 
-            audMan.PlaySingle(RankSounds[BaldiTimeUI.numOld]);
-            Rank.sprite = RankSprites[BaldiTimeUI.numOld];
+            audMan.PlaySingle(BasePlugin.AssetMan.Get<SoundObject>("Rank_" + BaldiTimeActions.ranks[BaldiTimeUI.numOld]));
+            Rank.sprite = BasePlugin.AssetMan.Get<Sprite>("RankAnime_Rank_" + BaldiTimeActions.ranks[BaldiTimeUI.numOld]);
 
             float timer = 0f;
             while (timer <= 14f)
@@ -131,7 +125,7 @@ namespace ItsBaldiTimeRework
                 }
                 else if (timer <= 4f)
                 {
-                    Student.sprite = StudentSprites[BaldiTimeUI.numOld];
+                    Student.sprite = BasePlugin.AssetMan.Get<Sprite>("RankAnime_Student_" + BaldiTimeActions.ranks[BaldiTimeUI.numOld]);
                     Student.rectTransform.anchoredPosition = new Vector2(-480f + 480f * math.sin((timer - 3f) * (math.PI / 2)), 0f);
                 }
                 else
@@ -353,7 +347,7 @@ namespace ItsBaldiTimeRework
         public static IEnumerator OpeningAnimations(Canvas canvas, AudioSource audSource, TMP_Text textBox, MonoBehaviour monoBehaviour)
         {
             openingPlayed = false;
-            audSource.clip = OpeningMusic;
+            audSource.clip = BasePlugin.AssetMan.Get<AudioClip>("TimeForASmackdown");
             audSource.loop = false;
             audSource.Play();
 

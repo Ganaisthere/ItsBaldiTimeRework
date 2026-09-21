@@ -33,19 +33,6 @@ namespace ItsBaldiTimeRework
             __instance.ReflectionSetVariable("allNotebooksFound", true);
             if (BaldiTimeActions.lap < 1)
             {
-                List<RoomController> rooms = __instance.Ec.rooms;
-                foreach (RoomController room in rooms)
-                {
-                    List<Pickup> items = room.pickups;
-                    foreach (Pickup item in items)
-                    {
-                        if (item.item == BasePlugin.AssetMan.Get<ItemObject>("BaldiClock"))
-                        {
-                            item.free = true;
-                            item.itemSprite.sprite = BasePlugin.AssetMan.Get<Sprite>("BaldiClockIcon_Large");
-                        }
-                    }
-                }
                 BaldiTimeActions.Lapping(__instance);
             }
             else
@@ -168,6 +155,7 @@ namespace ItsBaldiTimeRework
         [HarmonyPostfix]
         public static void UpdatePostfix()
         {
+            Debug.LogWarning(Singleton<PlayerFileManager>.Instance.volume[2]);
             if (Singleton<BaseGameManager>.Instance.GameMode != GameMode.HideAndSeek || Singleton<BaseGameManager>.Instance.InPitstop())
             {
                 return;
@@ -222,9 +210,9 @@ namespace ItsBaldiTimeRework
                 {
                     BaldiTimeUI.PointDisplay.rectTransform.localScale = Vector3.one;
                     BaldiTimeUI.ComboBar.rectTransform.localScale = Vector3.one;
-                    BaldiTimeUI.RankBackground.color = BaldiTimeUI.RankColors[0];
-                    BaldiTimeUI.RankColor.sprite = BaldiTimeUI.RankColorSprites[0];
-                    BaldiTimeUI.RankOverlay.sprite = BaldiTimeUI.RankOverlaySprites[0];
+                    BaldiTimeUI.RankImage.sprite = BaldiTimeUI.RankDSprite;
+                    BaldiTimeUI.RankOverlay.sprite = BaldiTimeUI.RankDSprite;
+                    BaldiTimeUI.RankOverlay.rectTransform.anchoredPosition = new Vector2(0f, 48f);
                 }
             }
         }
@@ -338,33 +326,18 @@ namespace ItsBaldiTimeRework
     {
         [HarmonyPatch("UseItem")]
         [HarmonyPrefix]
-        public static bool UseItemPrefix(ItemManager __instance)
+        public static void UseItemPrefix(ItemManager __instance)
         {
             if (Singleton<BaseGameManager>.Instance.GameMode != GameMode.HideAndSeek || Singleton<BaseGameManager>.Instance.InPitstop())
             {
-                return true;
+                return;
             }
             bool disabled = (bool)__instance.ReflectionGetVariable("disabled");
             if (disabled && (!__instance.items[__instance.selectedItem].overrideDisabled || __instance.maxItem < 0))
             {
-                return false;
+                return;
             }
-            Item item = Object.Instantiate(__instance.items[__instance.selectedItem].item);
-            if (item.Use(__instance.pm))
-            {
-                if (__instance.items[__instance.selectedItem].itemType != Items.None)
-                {
-                    BaldiTimeActions.points += math.round(__instance.items[__instance.selectedItem].price / 2f);
-                    BaldiTimeActions.AddCombo(0f, __instance.items[__instance.selectedItem].price / 90f);
-                }
-                if (Singleton<CoreGameManager>.Instance.inventoryChallenge)
-                {
-                    __instance.ReduceTargetInventorySize();
-                }
-                __instance.RemoveItem(__instance.selectedItem);
-                item?.PostUse(__instance.pm);
-            }
-            return false;
+            BaldiTimeActions.AddCombo(0f, __instance.items[__instance.selectedItem].price / 45f);
         }
     }
 
@@ -421,6 +394,36 @@ namespace ItsBaldiTimeRework
         }
     }
 
+    [HarmonyPatch(typeof(Pickup))]
+    public class PickupPatch
+    {
+        [HarmonyPatch("Start")]
+        [HarmonyPostfix]
+        public static void Postfix(Pickup __instance)
+        {
+            if (__instance.item == BasePlugin.AssetMan.Get<ItemObject>("BaldiClock"))
+            {
+                __instance.itemSprite.sprite = BasePlugin.AssetMan.Get<Sprite>("BaldiClockIcon_Large_Transparent");
+            }
+        }
+
+        [HarmonyPatch("Collect")]
+        [HarmonyPrefix]
+        public static bool Prefix(int player, Pickup __instance)
+        {
+            if (__instance.item == BasePlugin.AssetMan.Get<ItemObject>("BaldiClock"))
+            {
+                Singleton<CoreGameManager>.Instance.audMan.PlaySingle(__instance.item.audPickupOverride);
+                Object.Instantiate(__instance.item.item).Use(Singleton<CoreGameManager>.Instance.GetPlayer(player));
+                __instance.free = false;
+                __instance.item.price = 12251225;
+                __instance.itemSprite.sprite = BasePlugin.AssetMan.Get<Sprite>("BaldiClockIcon_Large_Transparent");
+                return false;
+            }
+            return true;
+        }
+    }
+
     [HarmonyPatch(typeof(WarningScreen))]
     public class WarningScreenPatch
     {
@@ -428,7 +431,7 @@ namespace ItsBaldiTimeRework
         [HarmonyPrefix]
         public static bool UpdatePrefix()
         {
-            if (BaldiTimeAnimations.openingPlayed || !BasePlugin.Instance.ConfigOpeningAnimations.Value)
+            if (BaldiTimeAnimations.openingPlayed)
             {
                 return true;
             }
@@ -439,10 +442,6 @@ namespace ItsBaldiTimeRework
         [HarmonyPostfix]
         public static void StartPostfix(WarningScreen __instance)
         {
-            if (!BasePlugin.Instance.ConfigOpeningAnimations.Value)
-            {
-                return;
-            }
             Canvas canvas = __instance.GetComponent<Canvas>();
             AudioSource audSource = __instance.ReflectionGetVariable("audSource") as AudioSource;
             audSource.Stop();

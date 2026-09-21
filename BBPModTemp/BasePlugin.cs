@@ -5,8 +5,10 @@ using HarmonyLib;
 using MTM101BaldAPI;
 using MTM101BaldAPI.AssetTools;
 using MTM101BaldAPI.ObjectCreation;
+using MTM101BaldAPI.OptionsAPI;
 using MTM101BaldAPI.Registers;
 using MTM101BaldAPI.SaveSystem;
+using Newtonsoft.Json;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
@@ -16,9 +18,12 @@ using static BepInEx.BepInDependency;
 
 namespace ItsBaldiTimeRework
 {
-    [BepInPlugin("ganaisthere.plus.itsbalditimerework", "Its Baldi Time: Reworked", "0.1.0.0")]
+    [BepInPlugin("ganaisthere.plus.itsbalditimerework", "Its Baldi Time Reworked", "0.2.0.0")]
     [BepInDependency("mtm101.rulerp.bbplus.baldidevapi")]
     [BepInDependency("pixelguy.pixelmodding.baldiplus.custommainmenusapi", DependencyFlags.SoftDependency)]
+    //[BepInDependency("il.modded.raldi.tweaks", DependencyFlags.SoftDependency)]//IDK why it's broken
+    //[BepInDependency("Nil.NullscapeinBB", DependencyFlags.SoftDependency)]//IDK why it's broken too
+    //[BepInIncompatibility("com.styx.baldi.quickstart")]//Broken
 
     public class BasePlugin : BaseUnityPlugin
     {
@@ -26,10 +31,81 @@ namespace ItsBaldiTimeRework
         public static AssetManager AssetMan = new AssetManager();
         public static List<WeightedRoomAsset> classWeightedRoomAsset = new List<WeightedRoomAsset>();
 
+        //Copyright (c) 2023 benjaminpants
+        //Licensed under the MIT License(MIT)
+        public class PackMeta
+        {
+            [JsonProperty("Name")]
+            public string name;
+
+            [JsonProperty("Description")]
+            public string description;
+
+            [JsonProperty("Author")]
+            public string author;
+
+            [JsonProperty("ReplaceSpoopMusic")]
+            public bool replaceSpoopMusic;
+
+            [JsonProperty("ReplaceTitleCard")]
+            public bool replaceTitleCard;
+
+            [JsonProperty("ReplaceComboLevels")]
+            public bool replaceComboLevels;
+
+            public PackMeta()
+            {
+                name = "Unnamed Pack";
+                description = "No description added yet.";
+                author = "IDK";
+                replaceSpoopMusic = false;
+                replaceTitleCard = false;
+                replaceComboLevels = false;
+            }
+        }
+        public static Dictionary<string, PackMeta> AllPacks = new Dictionary<string, PackMeta>();
+        public static List<string> AllPackStrings = new List<string>();
+        public static List<string> LoadedPacks = new List<string>();
+
         //---------------------------------------------------------------------
         public ConfigEntry<bool> ConfigUniqueGenerator;
         public ConfigEntry<bool> ConfigShowToppins;
         public ConfigEntry<bool> ConfigOpeningAnimations;
+        //---------------------------------------------------------------------
+        //public TextMeshProUGUI PackListText;
+        //public TextMeshProUGUI PackDescriptionText;
+        //public TextMeshProUGUI PackAuthorText;
+        //public List<string> PackList = new List<string>();
+        //public int PackIndex = 0;
+        //public ConfigEntry<int> configPackIndex;
+        //public int PackOptionsIndex => configPackIndex.Value;
+        //----------------------------------------------------------------------
+        public static bool IsRaldiTweaksInstalled = false;
+        public static bool IsNullscapeinBBInstalled = false;
+        public bool optionsMenuBuilt = false;
+        //----------------------------------------------------------------------
+        public void Update()
+        {
+            IsNullscapeinBBInstalled = Chainloader.PluginInfos.ContainsKey("Nil.NullscapeinBB");
+            IsRaldiTweaksInstalled = Chainloader.PluginInfos.ContainsKey("il.modded.raldi.tweaks");
+
+            //-----------------------------------------------------------------
+
+            if (optionsMenuBuilt)
+            {
+                /*configPackIndex.Value = PackIndex;
+                if (PackIndex >= PackList.Count)
+                {
+                    PackIndex = 0;
+                }
+                if (PackList.Count > 0)
+                {
+                    //PackListText.text = RPLoader.packMetas[PackIndex].name;
+                    //PackDescriptionText.text = RPLoader.packMetas[PackIndex].description;
+                    //PackAuthorText.text = RPLoader.packMetas[PackIndex].author;
+                }*/
+            }
+        }
         //---------------------------------------------------------------------
         public void Awake()
         {
@@ -55,151 +131,210 @@ namespace ItsBaldiTimeRework
                 "If true, If true, the mod will show an opening animation before the game's warning screen."
             );
             Instance = this;
-            new Harmony("ganaisthere.plus.itsbalditimerework").PatchAllConditionals();
+            Harmony harmony = new Harmony("ganaisthere.plus.itsbalditimerework");
+            harmony.PatchAllConditionals();
             ModdedSaveGame.AddSaveHandler(base.Info);
-            AddEnglishLocalization("Subtitles_English.json");
-            LoadOpeningAssets();
             LoadingEvents.RegisterOnAssetsLoaded(base.Info, this.LoadAssets(), LoadingEventOrder.Start);
             GeneratorManagement.Register(this, GenerationModType.Addend, AddObjects);
 
             if (Chainloader.PluginInfos.ContainsKey("pixelguy.pixelmodding.baldiplus.custommainmenusapi"))
             {
-                AddTexture2D("Menu.png", "Textures/UI");
-                Texture2DToSprite("Menu");
-                CustomMainMenu.sprite = AssetMan.Get<Sprite>("Menu");
-                AddMidi("TitlePEPBRMG.mid", "Midi");
-                CustomMainMenu.Setup();
-            }
-            else
-            {
-                Logger.LogInfo("CustomMainMenusAPI is not installed.");
-                /*Logger.LogInfo("All PluginInfo:");
-                foreach (KeyValuePair<string, PluginInfo> i in Chainloader.PluginInfos)
+                string corePath = Path.Combine(AssetLoader.GetModPath(this), ".Core");
+                if (Directory.Exists(corePath))
                 {
-                    Logger.LogInfo(i);
-                }*/
+                    CustomMainMenuSupport.sprite = AssetLoader.SpriteFromFile(Path.Combine(corePath, "Menu.png"), new Vector2(0.5f, 0.5f));
+                    AssetLoader.MidiFromFile(Path.Combine(corePath, "TitlePEPBRMG.mid"), "TitlePEPBRMG");
+                    CustomMainMenuSupport.Setup();
+                }
             }
+
+            AddEnglishLocalization("Subtitles_English.json", ".Core");
+            LoadResources(harmony);
+
+            //PackIndex = PackOptionsIndex;
+            CustomOptionsCore.OnMenuInitialize += OnMen;
         }
 
-        private void LoadOpeningAssets()
+        private void OnMen(OptionsMenu __instance, CustomOptionsHandler handler)
         {
-            AddAudioClip("TimeForASmackdown.ogg", "AudioClips/Misc", true);
-            BaldiTimeAnimations.OpeningMusic = AssetMan.Get<AudioClip>("TimeForASmackdown");
-            for (int i = 0; i < 3; i++)
+            handler.AddCategory<PackOptions>("BaldiTimeRE\n- Packs -");
+        }
+
+        public void LoadResources(Harmony harmony = null)
+        {
+            Log("Loading ResourcePacks, Please be patient .. (May take a long time)");
+
+            AllPacks.Clear();
+            AllPackStrings.Clear();
+            LoadedPacks.Clear();
+
+            AssetMan.ClearAll<AudioClip>();
+            AssetMan.ClearAll<SoundObject>();
+            AssetMan.ClearAll<Texture2D>();
+            AssetMan.ClearAll<Sprite>();
+
+            string resourcePackPath = Path.Combine(AssetLoader.GetModPath(this), "ResourcePacks");
+            if (!Directory.Exists(resourcePackPath))
             {
-                string filename = "0_" + i.ToString();
-                AddTexture2D(filename + ".png", "Textures/Misc/Opening");
-                Texture2DToSprite(filename);
-                BaldiTimeAnimations.Sprites_0[i] = AssetMan.Get<Sprite>(filename);
+                Directory.CreateDirectory(resourcePackPath);
             }
-            AddTexture2D("Border.png", "Textures/Misc/Opening");
-            Texture2DToSprite("Border");
-            BaldiTimeAnimations.Border_Sprite = AssetMan.Get<Sprite>("Border");
-            for (int i = 0; i < 2; i++)
+            string[] allResourcePackPaths = Directory.GetDirectories(resourcePackPath, "*", SearchOption.TopDirectoryOnly);
+
+            if (allResourcePackPaths.Length <= 0 && harmony != null)
             {
-                string filename = "1_" + i.ToString();
-                AddTexture2D(filename + ".png", "Textures/Misc/Opening");
-                Texture2DToSprite(filename);
-                BaldiTimeAnimations.Sprites_1[i] = AssetMan.Get<Sprite>(filename);
+                Log("No pack found, Please check mod's folder: " + resourcePackPath, 2);
+                harmony.UnpatchSelf();
+                StopAllCoroutines();
+                return;
             }
-            for (int i = 0; i < 4; i++)
+            foreach (string path in allResourcePackPaths)
             {
-                string filename = "2_" + i.ToString();
-                AddTexture2D(filename + ".png", "Textures/Misc/Opening");
-                Texture2DToSprite(filename);
-                BaldiTimeAnimations.Sprites_2[i] = AssetMan.Get<Sprite>(filename);
+                string packJsonPath = Path.Combine(path, "pack.json");
+                if (File.Exists(packJsonPath))
+                {
+                    string packname = Path.GetFileName(path);
+                    PackMeta packMeta = JsonConvert.DeserializeObject<PackMeta>(File.ReadAllText(Path.Combine(path, "pack.json")));
+                    Log("Found Pack: " + packname);
+                    AllPacks.Add(packname, packMeta);
+                    AllPackStrings.Add(packname);
+                }
+                else
+                {
+                    Log("This pack hasn't 'pack.json'!, Path: " + path, 2);
+                }
             }
-            for (int i = 1; i < 3; i++)
+            if (AllPacks.Count <= 0 && harmony != null)
             {
-                string filename = "2_2_" + i.ToString();
-                AddTexture2D(filename + ".png", "Textures/Misc/Opening");
-                Texture2DToSprite(filename);
-                BaldiTimeAnimations.Sprites_2_2[i - 1] = AssetMan.Get<Sprite>(filename);
+                Log("No pack found, Please check mod's folder: " + resourcePackPath, 2);
+                harmony.UnpatchSelf();
+                StopAllCoroutines();
+                return;
             }
-            for (int i = 0; i < 4; i++)
+
+            string saveFilePath = Path.Combine(AssetLoader.GetModPath(this), ".Core", "Save.txt");
+            if (!File.Exists(saveFilePath))
             {
-                string filename = "3_" + i.ToString();
-                AddTexture2D(filename + ".png", "Textures/Misc/Opening");
-                Texture2DToSprite(filename);
-                BaldiTimeAnimations.Sprites_3[i] = AssetMan.Get<Sprite>(filename);
+                File.WriteAllText(saveFilePath, ".Vanilla");
             }
-            for (int i = 0; i < 2; i++)
+            else if (File.ReadAllText(saveFilePath).Length <= 0)
             {
-                string filename = "3_4_" + i.ToString();
-                AddTexture2D(filename + ".png", "Textures/Misc/Opening");
-                Texture2DToSprite(filename);
-                BaldiTimeAnimations.Sprites_3_4[i] = AssetMan.Get<Sprite>(filename);
+                File.WriteAllText(saveFilePath, ".Vanilla");
             }
-            for (int i = 0; i < 4; i++)
+            string[] loadedPacks = File.ReadAllLines(saveFilePath);
+            LoadedPacks.Add(".Vanilla");
+            foreach (string loadedPack in loadedPacks)
             {
-                string filename = "4_" + i.ToString();
-                AddTexture2D(filename + ".png", "Textures/Misc/Opening");
-                Texture2DToSprite(filename);
-                BaldiTimeAnimations.Sprites_4[i] = AssetMan.Get<Sprite>(filename);
+                if (AllPacks.ContainsKey(loadedPack) && loadedPack.Length > 0 && !LoadedPacks.Contains(loadedPack))
+                {
+                    LoadedPacks.Add(loadedPack);
+                    Log("LoadedPack: " + loadedPack);
+                }
             }
-            for (int i = 0; i < 4; i++)
-            {
-                string filename = "5_" + i.ToString();
-                AddTexture2D(filename + ".png", "Textures/Misc/Opening");
-                Texture2DToSprite(filename);
-                BaldiTimeAnimations.Sprites_5[i] = AssetMan.Get<Sprite>(filename);
-            }
-            for (int i = 0; i < 5; i++)
-            {
-                string filename = "6_" + i.ToString();
-                AddTexture2D(filename + ".png", "Textures/Misc/Opening");
-                Texture2DToSprite(filename);
-                BaldiTimeAnimations.Sprites_6[i] = AssetMan.Get<Sprite>(filename);
-            }
-            for (int i = 0; i < 8; i++)
-            {
-                string filename = "7_" + i.ToString();
-                AddTexture2D(filename + ".png", "Textures/Misc/Opening");
-                Texture2DToSprite(filename);
-                BaldiTimeAnimations.Sprites_7[i] = AssetMan.Get<Sprite>(filename);
-            }
-            for (int i = 0; i < 7; i++)
-            {
-                string filename = "8_" + i.ToString();
-                AddTexture2D(filename + ".png", "Textures/Misc/Opening");
-                Texture2DToSprite(filename);
-                BaldiTimeAnimations.Sprites_8[i] = AssetMan.Get<Sprite>(filename);
-            }
-            for (int i = 0; i < 7; i++)
-            {
-                string filename = "9_" + i.ToString();
-                AddTexture2D(filename + ".png", "Textures/Misc/Opening");
-                Texture2DToSprite(filename);
-                BaldiTimeAnimations.Sprites_9[i] = AssetMan.Get<Sprite>(filename);
-            }
-            for (int i = 0; i < 3; i++)
-            {
-                string filename = "10_" + i.ToString();
-                AddTexture2D(filename + ".png", "Textures/Misc/Opening");
-                Texture2DToSprite(filename);
-                BaldiTimeAnimations.Sprites_10[i] = AssetMan.Get<Sprite>(filename);
-            }
-            for (int i = 0; i < 3; i++)
-            {
-                string filename = "11_" + i.ToString();
-                AddTexture2D(filename + ".png", "Textures/Misc/Opening");
-                Texture2DToSprite(filename);
-                BaldiTimeAnimations.Sprites_11[i] = AssetMan.Get<Sprite>(filename);
-            }
-            for (int i = 0; i < 5; i++)
-            {
-                string filename = "12_" + i.ToString();
-                AddTexture2D(filename + ".png", "Textures/Misc/Opening");
-                Texture2DToSprite(filename);
-                BaldiTimeAnimations.Sprites_12[i] = AssetMan.Get<Sprite>(filename);
-            }
-            for (int i = 0; i < 2; i++)
-            {
-                string filename = "13_" + i.ToString();
-                AddTexture2D(filename + ".png", "Textures/Misc/Opening");
-                Texture2DToSprite(filename);
-                BaldiTimeAnimations.Sprites_13[i] = AssetMan.Get<Sprite>(filename);
-            }
+            File.WriteAllLines(saveFilePath, LoadedPacks);
+
+            // AudioClips/Laps
+            AddLapMusics();
+            // AudioClips/Misc
+            AddAudioClip("Meatophobia.ogg", "AudioClips/Misc");
+            AddAudioClip("TimeForASmackdown.ogg", "AudioClips/Misc");
+            // AudioClips/Spoop
+            AddSpoopMusics();
+
+            // SoundObjects/Effects
+            AddSoundObject("bellcollectsmall.ogg", "SoundObjects/Effects");
+            AddSoundObject("comboup1.ogg", "SoundObjects/Effects");
+            AddSoundObject("comboup2.ogg", "SoundObjects/Effects");
+            AddSoundObject("comboup3.ogg", "SoundObjects/Effects");
+            AddSoundObject("JOHN_PILLAR_IMPACT.ogg", "SoundObjects/Effects");
+            AddSoundObject("Lapping.ogg", "SoundObjects/Effects");
+            AddSoundObject("rankdown1.ogg", "SoundObjects/Effects");
+            AddSoundObject("rankdown2.ogg", "SoundObjects/Effects");
+            AddSoundObject("rankdown3.ogg", "SoundObjects/Effects");
+            AddSoundObject("rankdown4.ogg", "SoundObjects/Effects");
+            AddSoundObject("rankdown5.ogg", "SoundObjects/Effects");
+            AddSoundObject("rankup1.ogg", "SoundObjects/Effects");
+            AddSoundObject("rankup2.ogg", "SoundObjects/Effects");
+            AddSoundObject("rankup3.ogg", "SoundObjects/Effects");
+            AddSoundObject("rankup4.ogg", "SoundObjects/Effects");
+            AddSoundObject("rankup5.ogg", "SoundObjects/Effects");
+            AddSoundObject("sfx_collecttoppin.ogg", "SoundObjects/Effects");
+            AddSoundObject("sfx_lapenter.ogg", "SoundObjects/Effects");
+            AddSoundObject("sfx_lapexit.ogg", "SoundObjects/Effects");
+            // SoundObjects/Effects/Rank
+            AddSoundObject("Rank_D.ogg", "SoundObjects/Effects/Rank");
+            AddSoundObject("Rank_C.ogg", "SoundObjects/Effects/Rank");
+            AddSoundObject("Rank_B.ogg", "SoundObjects/Effects/Rank");
+            AddSoundObject("Rank_A.ogg", "SoundObjects/Effects/Rank");
+            AddSoundObject("Rank_S.ogg", "SoundObjects/Effects/Rank");
+            AddSoundObject("Rank_P.ogg", "SoundObjects/Effects/Rank");
+            AddSoundObject("Rank_L.ogg", "SoundObjects/Effects/Rank");
+
+            // Textures/Entity
+            AddTexture2D("LapPortal_0.png", "Textures/Entity", true, 16f);
+            AddTexture2D("LapPortal_1.png", "Textures/Entity", true, 16f);
+            AddTexture2D("Toppins_0_Idle.png", "Textures/Entity", new Vector2(0.5f, 0.6f));
+            AddTexture2D("Toppins_0_Yay.png", "Textures/Entity", new Vector2(0.5f, 0.6f));
+            AddTexture2D("Toppins_1_Idle.png", "Textures/Entity", new Vector2(0.5f, 0.6f));
+            AddTexture2D("Toppins_1_Yay.png", "Textures/Entity", new Vector2(0.5f, 0.6f));
+            AddTexture2D("Toppins_2_Idle.png", "Textures/Entity", new Vector2(0.5f, 0.6f));
+            AddTexture2D("Toppins_2_Yay.png", "Textures/Entity", new Vector2(0.5f, 0.6f));
+            AddTexture2D("Toppins_3_Idle.png", "Textures/Entity", new Vector2(0.5f, 0.6f));
+            AddTexture2D("Toppins_3_Yay.png", "Textures/Entity", new Vector2(0.5f, 0.6f));
+            AddTexture2D("Toppins_4_Idle.png", "Textures/Entity", new Vector2(0.5f, 0.6f));
+            AddTexture2D("Toppins_4_Yay.png", "Textures/Entity", new Vector2(0.5f, 0.6f));
+            AddTexture2D("ToppinsCage.png", "Textures/Entity", new Vector2(0.5f, 0.45f), 10f);
+            // Textures/GUI
+            AddTexture2D("BaldiTimeLogo_0.png", "Textures/GUI", true);
+            AddTexture2D("BaldiTimeLogo_1.png", "Textures/GUI", true);
+            AddTexture2D("ComboDisplay_0.png", "Textures/GUI", true);
+            AddTexture2D("ComboDisplay_1.png", "Textures/GUI", true);
+            AddTexture2D("ComboDisplay_2.png", "Textures/GUI", true);
+            AddTexture2D("ComboDisplay_3.png", "Textures/GUI", true);
+            AddTexture2D("TimerBar_0.png", "Textures/GUI", true);
+            AddTexture2D("TimerBar_1.png", "Textures/GUI", true);
+            AddTexture2D("TimerBar_2.png", "Textures/GUI", true);
+            AddTexture2D("TimerBar_3.png", "Textures/GUI", true);
+            // Textures/GUI/ComboLevels
+            AddComboLevels();
+            // Textures/GUI/LapFlags
+            AddTexture2D("Lap2Flag.png", "Textures/GUI/LapFlags", true);
+            // Textures/GUI/RankDisplay
+            AddTexture2D("Rank_D_0.png", "Textures/GUI/RankDisplay", true);
+            AddTexture2D("Rank_D_1.png", "Textures/GUI/RankDisplay", true);
+            AddTexture2D("Rank_C_0.png", "Textures/GUI/RankDisplay", true);
+            AddTexture2D("Rank_C_1.png", "Textures/GUI/RankDisplay", true);
+            AddTexture2D("Rank_B_0.png", "Textures/GUI/RankDisplay", true);
+            AddTexture2D("Rank_B_1.png", "Textures/GUI/RankDisplay", true);
+            AddTexture2D("Rank_A_0.png", "Textures/GUI/RankDisplay", true);
+            AddTexture2D("Rank_A_1.png", "Textures/GUI/RankDisplay", true);
+            AddTexture2D("Rank_S_0.png", "Textures/GUI/RankDisplay", true);
+            AddTexture2D("Rank_P_0.png", "Textures/GUI/RankDisplay", true);
+            AddTexture2D("Rank_L_0.png", "Textures/GUI/RankDisplay", true);
+            // Textures/Items
+            AddTexture2D("BaldiClockIcon_Large.png", "Textures/Items", true);
+            AddTexture2D("BaldiClockIcon_Large_Transparent.png", "Textures/Items", true);
+            // Textures/Misc
+            AddTexture2D("Notebook_John.png", "Textures/Misc", true, 100f);
+            // Textures/Misc/Opening
+            AddOpeningStuffs();
+            // Textures/Misc/RankAnime
+            AddTexture2D("RankAnime_Student_0.png", "Textures/Misc/RankAnime", true);
+            AddTexture2D("RankAnime_Student_D.png", "Textures/Misc/RankAnime", true);
+            AddTexture2D("RankAnime_Student_C.png", "Textures/Misc/RankAnime", true);
+            AddTexture2D("RankAnime_Student_B.png", "Textures/Misc/RankAnime", true);
+            AddTexture2D("RankAnime_Student_A.png", "Textures/Misc/RankAnime", true);
+            AddTexture2D("RankAnime_Student_S.png", "Textures/Misc/RankAnime", true);
+            AddTexture2D("RankAnime_Student_P.png", "Textures/Misc/RankAnime", true);
+            AddTexture2D("RankAnime_Rank_D.png", "Textures/Misc/RankAnime", true);
+            AddTexture2D("RankAnime_Rank_C.png", "Textures/Misc/RankAnime", true);
+            AddTexture2D("RankAnime_Rank_B.png", "Textures/Misc/RankAnime", true);
+            AddTexture2D("RankAnime_Rank_A.png", "Textures/Misc/RankAnime", true);
+            AddTexture2D("RankAnime_Rank_S.png", "Textures/Misc/RankAnime", true);
+            AddTexture2D("RankAnime_Rank_P.png", "Textures/Misc/RankAnime", true);
+            // Textures/Misc/TitleCard
+            AddTitleCardStuffs();
+
+            BaldiTimeUI.RankDSprite = AssetMan.Get<Sprite>("Rank_D_0");
         }
 
         private IEnumerator LoadAssets()
@@ -219,206 +354,6 @@ namespace ItsBaldiTimeRework
                     }
                 }
             }
-
-            yield return "Loading Textures...";
-            AddTexture2D("BaldiTimeLogo_Sheet.png", "Textures/GUI");
-            AddTexture2D("TimerBar_Sheet.png", "Textures/GUI");
-            AddTexture2D("BaldiClockIcon_Large.png", "Textures/Items");
-            AddTexture2D("BaldiClockIcon_Large_Transparent.png", "Textures/Items");
-            AddTexture2D("ToppinsCage.png", "Textures/Entity");
-            for (int i = 0; i < 5; i++)
-            {
-                AddTexture2D("Toppins_" + i.ToString() + "_Idle.png", "Textures/Entity");
-                AddTexture2D("Toppins_" + i.ToString() + "_Yay.png", "Textures/Entity");
-            }
-            AddTexture2D("Notebook_John.png", "Textures/Misc");
-            AddTexture2D("Rank_Sheet.png", "Textures/GUI");
-            AddTexture2D("ComboDisplay_Sheet.png", "Textures/GUI");
-            AddTexture2D("LapPortal_0.png", "Textures/Entity");
-            AddTexture2D("LapPortal_1.png", "Textures/Entity");
-            AddTexture2D("Lap2Flag.png", "Textures/GUI/LapFlags");
-            AddTexture2D("RankAnime_Student_0.png", "Textures/Misc/RankAnime");
-            AddTexture2D("RankAnime_Student_D.png", "Textures/Misc/RankAnime");
-            AddTexture2D("RankAnime_Student_B.png", "Textures/Misc/RankAnime");
-            AddTexture2D("RankAnime_Student_C.png", "Textures/Misc/RankAnime");
-            AddTexture2D("RankAnime_Student_A.png", "Textures/Misc/RankAnime");
-            AddTexture2D("RankAnime_Student_S.png", "Textures/Misc/RankAnime");
-            AddTexture2D("RankAnime_Student_P.png", "Textures/Misc/RankAnime");
-            AddTexture2D("RankAnime_Rank_D.png", "Textures/Misc/RankAnime");
-            AddTexture2D("RankAnime_Rank_B.png", "Textures/Misc/RankAnime");
-            AddTexture2D("RankAnime_Rank_C.png", "Textures/Misc/RankAnime");
-            AddTexture2D("RankAnime_Rank_A.png", "Textures/Misc/RankAnime");
-            AddTexture2D("RankAnime_Rank_S.png", "Textures/Misc/RankAnime");
-            AddTexture2D("RankAnime_Rank_P.png", "Textures/Misc/RankAnime");
-
-            yield return "Loading...IDK";
-            string[] getfiles = Directory.GetFiles(AssetLoader.GetModPath(this) + "/Textures/GUI/ComboLevels/", "*.png", SearchOption.TopDirectoryOnly);
-            if (getfiles.Length > 0)
-            {
-                foreach (string file in getfiles)
-                {
-                    string fileName = Path.GetFileName(file);
-                    string fileNameWithoutExtension = Path.GetFileNameWithoutExtension(file);
-                    AddTexture2D(fileName, "Textures/GUI/ComboLevels");
-                    Texture2DToSprite(fileNameWithoutExtension);
-                    BaldiTimeUI.ComboLevelsSprites.Add(AssetMan.Get<Sprite>(fileNameWithoutExtension));
-                }
-            }
-
-            yield return "Loading Sounds...";
-            AddSoundObject("JOHN_PILLAR_IMPACT.ogg", "SoundObjects/Effects", true);
-            BaldiTimeActions.JOHN_PILLAR_IMPACT = AssetMan.Get<SoundObject>("JOHN_PILLAR_IMPACT");
-            AddSoundObject("bellcollectsmall.ogg", "SoundObjects/Effects", true);
-            AddSoundObject("sfx_collecttoppin.ogg", "SoundObjects/Effects", true);
-            AddAudioClip("Meatophobia.ogg", "AudioClips/Misc", true);
-            AddSoundObject("Lapping.ogg", "SoundObjects/Effects", true);
-            AddSoundObject("sfx_lapenter.ogg", "SoundObjects/Effects", true);
-            AddSoundObject("sfx_lapexit.ogg", "SoundObjects/Effects", true);
-            AddSoundObject("comboup1.ogg", "SoundObjects/Effects", true);
-            BaldiTimeUI.comboup[0] = AssetMan.Get<SoundObject>("comboup1");
-            AddSoundObject("comboup2.ogg", "SoundObjects/Effects");
-            BaldiTimeUI.comboup[1] = AssetMan.Get<SoundObject>("comboup2");
-            AddSoundObject("comboup4.ogg", "SoundObjects/Effects");
-            BaldiTimeUI.comboup[2] = AssetMan.Get<SoundObject>("comboup4");
-            for (int i = 1; i < 6; i++)
-            {
-                string up = "rankup" + i.ToString();
-                string down = "rankdown" + i.ToString();
-                AddSoundObject(up + ".ogg", "SoundObjects/Effects", true);
-                AddSoundObject(down + ".ogg", "SoundObjects/Effects", true);
-                BaldiTimeUI.rankup[i - 1] = AssetMan.Get<SoundObject>(up);
-                BaldiTimeUI.rankdown[i - 1] = AssetMan.Get<SoundObject>(down);
-            }
-            AddSoundObject("Rank_D.ogg", "SoundObjects/Effects/Rank", true);
-            BaldiTimeAnimations.RankSounds[0] = AssetMan.Get<SoundObject>("Rank_D");
-            AddSoundObject("Rank_C.ogg", "SoundObjects/Effects/Rank", true);
-            BaldiTimeAnimations.RankSounds[1] = AssetMan.Get<SoundObject>("Rank_C");
-            AddSoundObject("Rank_B.ogg", "SoundObjects/Effects/Rank", true);
-            BaldiTimeAnimations.RankSounds[2] = AssetMan.Get<SoundObject>("Rank_B");
-            AddSoundObject("Rank_A.ogg", "SoundObjects/Effects/Rank", true);
-            BaldiTimeAnimations.RankSounds[3] = AssetMan.Get<SoundObject>("Rank_A");
-            AddSoundObject("Rank_S.ogg", "SoundObjects/Effects/Rank", true);
-            BaldiTimeAnimations.RankSounds[4] = AssetMan.Get<SoundObject>("Rank_S");
-            AddSoundObject("Rank_P.ogg", "SoundObjects/Effects/Rank", true);
-            BaldiTimeAnimations.RankSounds[5] = AssetMan.Get<SoundObject>("Rank_P");
-            AddSoundObject("Rank_L.ogg", "SoundObjects/Effects/Rank", true);
-            BaldiTimeAnimations.RankSounds[6] = AssetMan.Get<SoundObject>("Rank_L");
-
-            yield return "Loading Lap Musics...";
-            AddAudioClip("Lap1-Intro.ogg", "SoundObjects/Laps");
-            AddAudioClip("Lap1-Loop.ogg", "SoundObjects/Laps");
-            AddAudioClip("Lap1-Outro.ogg", "SoundObjects/Laps");
-            AddAudioClip("Lap2-Intro.ogg", "SoundObjects/Laps");
-            AddAudioClip("Lap2-Loop.ogg", "SoundObjects/Laps");
-
-            getfiles = Directory.GetFiles(AssetLoader.GetModPath(this) + "/AudioClips/Spoop/", "*.ogg", SearchOption.TopDirectoryOnly);
-            if (getfiles.Length > 0)
-            {
-                foreach (string file in getfiles)
-                {
-                    yield return "Loading Floor Musics...";
-                    string fileNameWithoutExtension = Path.GetFileNameWithoutExtension(file);
-                    string fileName = Path.GetFileName(file);
-                    AddAudioClip(fileName, "AudioClips/Spoop");
-                    if (fileNameWithoutExtension.Contains("_F1"))
-                    {
-                        BaldiTimeActions.F1Mus.Add(fileNameWithoutExtension);
-                    }
-                    if (fileNameWithoutExtension.Contains("_F2"))
-                    {
-                        BaldiTimeActions.F2Mus.Add(fileNameWithoutExtension);
-                    }
-                    if (fileNameWithoutExtension.Contains("_F3"))
-                    {
-                        BaldiTimeActions.F3Mus.Add(fileNameWithoutExtension);
-                    }
-                    if (fileNameWithoutExtension.Contains("_F4"))
-                    {
-                        BaldiTimeActions.F4Mus.Add(fileNameWithoutExtension);
-                    }
-                    if (fileNameWithoutExtension.Contains("_F5"))
-                    {
-                        BaldiTimeActions.F5Mus.Add(fileNameWithoutExtension);
-                    }
-                    if (!fileNameWithoutExtension.Contains("_F1") && !fileNameWithoutExtension.Contains("_F2") && !fileNameWithoutExtension.Contains("_F3") && !fileNameWithoutExtension.Contains("_F4") && !fileNameWithoutExtension.Contains("_F5"))
-                    {
-                        BaldiTimeActions.AllMus.Add(fileNameWithoutExtension);
-                    }
-                }
-            }
-
-            yield return "Loading Title Cards...";
-            string[] getPng = Directory.GetFiles(AssetLoader.GetModPath(this) + "/TitleCard/", "*.png", SearchOption.TopDirectoryOnly);
-            if (getPng.Length > 0)
-            {
-                foreach (string file in getPng)
-                {
-                    string fileNameWithoutExtension = Path.GetFileNameWithoutExtension(file);
-                    string fileName = Path.GetFileName(file);
-                    if (!fileName.Contains("-Title.png"))
-                    {
-                        AddTexture2D(fileName, "TitleCard");
-                        Texture2DToSprite(fileNameWithoutExtension);
-                        BaldiTimeAnimations.TitleCardBackSprites.Add(AssetMan.Get<Sprite>(fileNameWithoutExtension));
-
-                        AddTexture2D(fileNameWithoutExtension + "-Title.png", "TitleCard");
-                        Texture2DToSprite(fileNameWithoutExtension + "-Title");
-                        BaldiTimeAnimations.TitleCardTitleSprites.Add(AssetMan.Get<Sprite>(fileNameWithoutExtension + "-Title"));
-
-                        AddSoundObject(fileNameWithoutExtension + "-Sound.ogg", "TitleCard");
-                        BaldiTimeAnimations.TitleCardSounds.Add(AssetMan.Get<SoundObject>(fileNameWithoutExtension + "-Sound"));
-                    }
-                }
-            }
-
-            yield return "Add Sprites...";
-            TextureSheetToSprite("BaldiTimeLogo_Sheet", 2f, 0f, "BaldiTimeLogo_0");
-            BaldiTimeUI.baldiTimeLogoSprites[0] = AssetMan.Get<Sprite>("BaldiTimeLogo_0");
-            TextureSheetToSprite("BaldiTimeLogo_Sheet", 2f, 1f, "BaldiTimeLogo_1");
-            BaldiTimeUI.baldiTimeLogoSprites[1] = AssetMan.Get<Sprite>("BaldiTimeLogo_1");
-            SetupTimerBarSprites();
-            Texture2DToSprite("BaldiClockIcon_Large", 50f);
-            Texture2DToSprite("BaldiClockIcon_Large_Transparent", 50f);
-            Texture2DToSprite("ToppinsCage", new Vector2(0.5f, 0.45f), 10f);
-            for (int i = 0; i < 5; i++)
-            {
-                Texture2DToSprite("Toppins_" + i.ToString() + "_Idle", new Vector2(0.5f, 0.6f), 50f);
-                Texture2DToSprite("Toppins_" + i.ToString() + "_Yay", new Vector2(0.5f, 0.6f), 50f);
-            }
-            Texture2DToSprite("Notebook_John", 100f);
-            BaldiTimeActions.Notebook_John = AssetMan.Get<Sprite>("Notebook_John");
-            SetupPointDisplaySprites();
-            SetupComboBarSprites();
-            Texture2DToSprite("LapPortal_0", 16f);
-            Texture2DToSprite("LapPortal_1", 16f);
-            Texture2DToSprite("Lap2Flag");
-            BaldiTimeUI.LapFlagSprites[0] = AssetMan.Get<Sprite>("Lap2Flag");
-            Texture2DToSprite("RankAnime_Student_0");
-            BaldiTimeAnimations.StudentSprite = AssetMan.Get<Sprite>("RankAnime_Student_0");
-            Texture2DToSprite("RankAnime_Student_D");
-            BaldiTimeAnimations.StudentSprites[0] = AssetMan.Get<Sprite>("RankAnime_Student_D");
-            Texture2DToSprite("RankAnime_Student_C");
-            BaldiTimeAnimations.StudentSprites[1] = AssetMan.Get<Sprite>("RankAnime_Student_C");
-            Texture2DToSprite("RankAnime_Student_B");
-            BaldiTimeAnimations.StudentSprites[2] = AssetMan.Get<Sprite>("RankAnime_Student_B");
-            Texture2DToSprite("RankAnime_Student_A");
-            BaldiTimeAnimations.StudentSprites[3] = AssetMan.Get<Sprite>("RankAnime_Student_A");
-            Texture2DToSprite("RankAnime_Student_S");
-            BaldiTimeAnimations.StudentSprites[4] = AssetMan.Get<Sprite>("RankAnime_Student_S");
-            Texture2DToSprite("RankAnime_Student_P");
-            BaldiTimeAnimations.StudentSprites[5] = AssetMan.Get<Sprite>("RankAnime_Student_P");
-            Texture2DToSprite("RankAnime_Rank_D");
-            BaldiTimeAnimations.RankSprites[0] = AssetMan.Get<Sprite>("RankAnime_Rank_D");
-            Texture2DToSprite("RankAnime_Rank_C");
-            BaldiTimeAnimations.RankSprites[1] = AssetMan.Get<Sprite>("RankAnime_Rank_C");
-            Texture2DToSprite("RankAnime_Rank_B");
-            BaldiTimeAnimations.RankSprites[2] = AssetMan.Get<Sprite>("RankAnime_Rank_B");
-            Texture2DToSprite("RankAnime_Rank_A");
-            BaldiTimeAnimations.RankSprites[3] = AssetMan.Get<Sprite>("RankAnime_Rank_A");
-            Texture2DToSprite("RankAnime_Rank_S");
-            BaldiTimeAnimations.RankSprites[4] = AssetMan.Get<Sprite>("RankAnime_Rank_S");
-            Texture2DToSprite("RankAnime_Rank_P");
-            BaldiTimeAnimations.RankSprites[5] = AssetMan.Get<Sprite>("RankAnime_Rank_P");
 
             yield return "Add ItemObjects...";
             ItemObject BaldiClock = new ItemBuilder(Info)
@@ -461,9 +396,6 @@ namespace ItsBaldiTimeRework
                 .AddMetaFlag(NPCFlags.StandardNoCollide)
                 .SetAirborne()
                 .Build();
-            lapPortal.Sfx_Enter = AssetMan.Get<SoundObject>("sfx_lapenter");
-            lapPortal.Sfx_Exit = AssetMan.Get<SoundObject>("sfx_lapexit");
-            lapPortal.Sfx_Lapping = AssetMan.Get<SoundObject>("Lapping");
             lapPortal.sprites[0] = AssetMan.Get<Sprite>("LapPortal_0");
             lapPortal.sprites[1] = AssetMan.Get<Sprite>("LapPortal_1");
             lapPortal.spriteRenderer[0].sprite = lapPortal.sprites[0];
@@ -472,7 +404,7 @@ namespace ItsBaldiTimeRework
             yield break;
         }
 
-        private void AddObjects(string floorName, int floorNumber, SceneObject sceneObject)
+        internal void AddObjects(string floorName, int floorNumber, SceneObject sceneObject)
         {
             CustomLevelObject[] customLevelObjects = CustomLevelObjectExtensions.GetCustomLevelObjects(sceneObject);
             if (floorName.StartsWith("F"))
@@ -508,188 +440,464 @@ namespace ItsBaldiTimeRework
                 }
             }
         }
+        internal void AddTitleCardStuffs()
+        {
+            BaldiTimeAnimations.TitleCardBackSprites.Clear();
+            BaldiTimeAnimations.TitleCardTitleSprites.Clear();
+            BaldiTimeAnimations.TitleCardSounds.Clear();
 
-        private void SetupComboBarSprites()
-        {
-            Texture2D texture2D = AssetMan.Get<Texture2D>("ComboDisplay_Sheet");
-            Sprite sprite1 = Sprite.Create(texture2D, new Rect(0f, texture2D.height / 3f, texture2D.width, texture2D.height / 3f * 2f), new Vector2(0.5f, 0.5f));
-            Sprite sprite2 = Sprite.Create(texture2D, new Rect(0f, 0f, texture2D.width / 6f * 5f, texture2D.height / 3f), new Vector2(0.5f, 0.5f));
-            Sprite sprite3 = Sprite.Create(texture2D, new Rect(texture2D.width / 6f * 5f, 0f, texture2D.width / 6f, texture2D.height / 3f), new Vector2(0.5f, 0.5f));
-            sprite1.name = "ComboBar_Overlay";
-            sprite2.name = "ComboBar_Background";
-            sprite3.name = "ComboBar_Niddle";
-            AssetMan.Add("ComboBar_Overlay", sprite1);
-            AssetMan.Add("ComboBar_Background", sprite2);
-            AssetMan.Add("ComboBar_Niddle", sprite3);
-            BaldiTimeUI.ComboBarSprites[0] = AssetMan.Get<Sprite>("ComboBar_Overlay");
-            BaldiTimeUI.ComboBarSprites[1] = AssetMan.Get<Sprite>("ComboBar_Background");
-            BaldiTimeUI.ComboBarSprites[2] = AssetMan.Get<Sprite>("ComboBar_Niddle");
-        }
-        private void SetupTimerBarSprites()
-        {
-            Texture2D texture2D = AssetMan.Get<Texture2D>("Rank_Sheet");
-            for (int p = 0; p < 4; p++)
+            string chlidPath = "Textures/Misc/TitleCard";
+            int basePackInt = 0;
+
+            for (int i = LoadedPacks.Count - 1; i >= 0; i--)
             {
-                for (int i = 0; i < 7; i++)
+                string pack = LoadedPacks[i];
+                if (AllPacks[pack].replaceTitleCard)
                 {
-                    Sprite sprite = Sprite.Create(texture2D, new Rect(0f + i * texture2D.width / 7, texture2D.height / 7f * (6 - p), texture2D.width / 7f, texture2D.height / 7f), new Vector2(0.5f, 0.5f));
-                    int o = i + 7 * p;
-                    sprite.name = "RankColor_" + o.ToString();
-                    AssetMan.Add("RankColor_" + o.ToString(), sprite);
-                    BaldiTimeUI.RankColorSprites[o] = AssetMan.Get<Sprite>("RankColor_" + o.ToString());
+                    basePackInt = i;
+                    break;
                 }
             }
+
+            for (int i = LoadedPacks.Count - 1; i >= basePackInt; i--)
+            {
+                string pack = LoadedPacks[i];
+                string packPath = Path.Combine(AssetLoader.GetModPath(this), "ResourcePacks", pack, chlidPath);
+                if (Directory.Exists(packPath))
+                {
+                    string[] getfiles = Directory.GetFiles(packPath, "*.png", SearchOption.TopDirectoryOnly);
+                    if (getfiles.Length > 0)
+                    {
+                        foreach (string file in getfiles)
+                        {
+                            string fileNameWithoutExtension = Path.GetFileNameWithoutExtension(file);
+                            string fileName = Path.GetFileName(file);
+                            if (!fileName.Contains("-Title.png"))
+                            {
+                                BaldiTimeAnimations.TitleCardBackSprites.Add(AssetLoader.SpriteFromFile(Path.Combine(packPath, fileName), new Vector2(0.5f, 0.5f)));
+
+                                BaldiTimeAnimations.TitleCardTitleSprites.Add(AssetLoader.SpriteFromFile(Path.Combine(packPath, fileNameWithoutExtension + "-Title.png"), new Vector2(0.5f, 0.5f)));
+
+                                SoundObject soundObject = ObjectCreators.CreateSoundObject(AssetLoader.AudioClipFromFile(Path.Combine(packPath, fileNameWithoutExtension + "-Sound.ogg")), "Nothing", SoundType.Music, Color.white, 0f);
+                                BaldiTimeAnimations.TitleCardSounds.Add(soundObject);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        internal void AddOpeningStuffs()
+        {
+            string chlidPath = "Textures/Misc/Opening";
+
+            AddTexture2D("Border.png", chlidPath, true);
+            BaldiTimeAnimations.Border_Sprite = AssetMan.Get<Sprite>("Border");
+
             for (int i = 0; i < 3; i++)
             {
-                Sprite sprite = Sprite.Create(texture2D, new Rect(0f + i * texture2D.width / 7, texture2D.height / 7f * 2, texture2D.width / 7f, texture2D.height / 7f), new Vector2(0.5f, 0.5f));
-                int o = i + 28;
-                sprite.name = "RankColor_" + o.ToString();
-                AssetMan.Add("RankColor_" + o.ToString(), sprite);
-                BaldiTimeUI.RankColorSprites[o] = AssetMan.Get<Sprite>("RankColor_" + o.ToString());
+                string fileName = "0_" + i.ToString();
+                AddTexture2D(fileName + ".png", chlidPath, true);
+                BaldiTimeAnimations.Sprites_0[i] = AssetMan.Get<Sprite>(fileName);
+            }
+            for (int i = 0; i < 2; i++)
+            {
+                string fileName = "1_" + i.ToString();
+                AddTexture2D(fileName + ".png", chlidPath, true);
+                BaldiTimeAnimations.Sprites_1[i] = AssetMan.Get<Sprite>(fileName);
+            }
+            for (int i = 0; i < 4; i++)
+            {
+                string fileName = "2_" + i.ToString();
+                AddTexture2D(fileName + ".png", chlidPath, true);
+                BaldiTimeAnimations.Sprites_2[i] = AssetMan.Get<Sprite>(fileName);
+            }
+            for (int i = 0; i < 2; i++)
+            {
+                string fileName = "2_2_" + (i + 1).ToString();
+                AddTexture2D(fileName + ".png", chlidPath, true);
+                BaldiTimeAnimations.Sprites_2_2[i] = AssetMan.Get<Sprite>(fileName);
+            }
+            for (int i = 0; i < 4; i++)
+            {
+                string fileName = "3_" + i.ToString();
+                AddTexture2D(fileName + ".png", chlidPath, true);
+                BaldiTimeAnimations.Sprites_3[i] = AssetMan.Get<Sprite>(fileName);
+            }
+            for (int i = 0; i < 2; i++)
+            {
+                string fileName = "3_4_" + i.ToString();
+                AddTexture2D(fileName + ".png", chlidPath, true);
+                BaldiTimeAnimations.Sprites_3_4[i] = AssetMan.Get<Sprite>(fileName);
+            }
+            for (int i = 0; i < 4; i++)
+            {
+                string fileName = "4_" + i.ToString();
+                AddTexture2D(fileName + ".png", chlidPath, true);
+                BaldiTimeAnimations.Sprites_4[i] = AssetMan.Get<Sprite>(fileName);
+            }
+            for (int i = 0; i < 4; i++)
+            {
+                string fileName = "5_" + i.ToString();
+                AddTexture2D(fileName + ".png", chlidPath, true);
+                BaldiTimeAnimations.Sprites_5[i] = AssetMan.Get<Sprite>(fileName);
+            }
+            for (int i = 0; i < 5; i++)
+            {
+                string fileName = "6_" + i.ToString();
+                AddTexture2D(fileName + ".png", chlidPath, true);
+                BaldiTimeAnimations.Sprites_6[i] = AssetMan.Get<Sprite>(fileName);
+            }
+            for (int i = 0; i < 8; i++)
+            {
+                string fileName = "7_" + i.ToString();
+                AddTexture2D(fileName + ".png", chlidPath, true);
+                BaldiTimeAnimations.Sprites_7[i] = AssetMan.Get<Sprite>(fileName);
             }
             for (int i = 0; i < 7; i++)
             {
-                Sprite sprite = Sprite.Create(texture2D, new Rect(0f + i * texture2D.width / 7, texture2D.height / 7f, texture2D.width / 7f, texture2D.height / 7f), new Vector2(0.5f, 0.5f));
-                sprite.name = "RankOverlay_" + BaldiTimeActions.ranks[i];
-                AssetMan.Add("RankOverlay_" + BaldiTimeActions.ranks[i], sprite);
-                BaldiTimeUI.RankOverlaySprites[i] = AssetMan.Get<Sprite>("RankOverlay_" + BaldiTimeActions.ranks[i]);
+                string fileName = "8_" + i.ToString();
+                AddTexture2D(fileName + ".png", chlidPath, true);
+                BaldiTimeAnimations.Sprites_8[i] = AssetMan.Get<Sprite>(fileName);
             }
-            Sprite sprite0 = Sprite.Create(texture2D, new Rect(texture2D.width / 7 * 6, texture2D.height / 7f * 2, texture2D.width / 7f, texture2D.height / 7f), new Vector2(0.5f, 0.5f));
-            sprite0.name = "RankBackground";
-            AssetMan.Add("RankBackground", sprite0);
-            BaldiTimeUI.RankBackgroundSprite = AssetMan.Get<Sprite>("RankBackground");
-        }
-        private void SetupPointDisplaySprites()
-        {
-            Texture2D texture2D = AssetMan.Get<Texture2D>("TimerBar_Sheet");
-            Sprite sprite1 = Sprite.Create(texture2D, new Rect(0f, texture2D.height / 3f * 2f, texture2D.width, texture2D.height / 3f), new Vector2(0.5f, 0.5f));
-            Sprite sprite2 = Sprite.Create(texture2D, new Rect(0f, texture2D.height / 3f, texture2D.width, texture2D.height / 3f), new Vector2(0.5f, 0.5f));
-            Sprite sprite3 = Sprite.Create(texture2D, new Rect(0f, 0f, texture2D.width / 256f * 32f, texture2D.height / 3f), new Vector2(0.5f, 0.5f));
-            sprite1.name = "TimerBar_Overlay";
-            sprite2.name = "TimerBar_Background";
-            sprite3.name = "TimerBar_Niddle";
-            AssetMan.Add("TimerBar_Overlay", sprite1);
-            AssetMan.Add("TimerBar_Background", sprite2);
-            AssetMan.Add("TimerBar_Niddle", sprite3);
-            BaldiTimeUI.TimerBarSprites[0] = AssetMan.Get<Sprite>("TimerBar_Overlay");
-            BaldiTimeUI.TimerBarSprites[1] = AssetMan.Get<Sprite>("TimerBar_Background");
-            BaldiTimeUI.TimerBarSprites[2] = AssetMan.Get<Sprite>("TimerBar_Niddle");
-        }
-        private void AddTexture2D(string fileNameWithExtension, string chlidPath)
-        {
-            string[] getfiles = Directory.GetFiles(AssetLoader.GetModPath(this) + "/" + chlidPath + "/", fileNameWithExtension);
-            if (getfiles.Length <= 0)
+            for (int i = 0; i < 7; i++)
             {
-                Debug.LogError("File not found: " + AssetLoader.GetModPath(this) + "/" + chlidPath + "/" + fileNameWithExtension);
+                string fileName = "9_" + i.ToString();
+                AddTexture2D(fileName + ".png", chlidPath, true);
+                BaldiTimeAnimations.Sprites_9[i] = AssetMan.Get<Sprite>(fileName);
+            }
+            for (int i = 0; i < 3; i++)
+            {
+                string fileName = "10_" + i.ToString();
+                AddTexture2D(fileName + ".png", chlidPath, true);
+                BaldiTimeAnimations.Sprites_10[i] = AssetMan.Get<Sprite>(fileName);
+            }
+            for (int i = 0; i < 3; i++)
+            {
+                string fileName = "11_" + i.ToString();
+                AddTexture2D(fileName + ".png", chlidPath, true);
+                BaldiTimeAnimations.Sprites_11[i] = AssetMan.Get<Sprite>(fileName);
+            }
+            for (int i = 0; i < 5; i++)
+            {
+                string fileName = "12_" + i.ToString();
+                AddTexture2D(fileName + ".png", chlidPath, true);
+                BaldiTimeAnimations.Sprites_12[i] = AssetMan.Get<Sprite>(fileName);
+            }
+            for (int i = 0; i < 2; i++)
+            {
+                string fileName = "13_" + i.ToString();
+                AddTexture2D(fileName + ".png", chlidPath, true);
+                BaldiTimeAnimations.Sprites_13[i] = AssetMan.Get<Sprite>(fileName);
+            }
+        }
+        internal void AddComboLevels()
+        {
+            BaldiTimeUI.AllComboLevels.Clear();
+            string chlidPath = "Textures/GUI/ComboLevels";
+            int basePackInt = 0;
+
+            for (int i = LoadedPacks.Count - 1; i >= 0; i--)
+            {
+                string pack = LoadedPacks[i];
+                if (AllPacks[pack].replaceComboLevels)
+                {
+                    basePackInt = i;
+                    break;
+                }
+            }
+
+            for (int i = LoadedPacks.Count - 1; i >= basePackInt; i--)
+            {
+                string pack = LoadedPacks[i];
+                string packPath = Path.Combine(AssetLoader.GetModPath(this), "ResourcePacks", pack, chlidPath);
+                if (Directory.Exists(packPath))
+                {
+                    string[] getfiles = Directory.GetFiles(packPath, "*.png", SearchOption.TopDirectoryOnly);
+                    if (getfiles.Length > 0)
+                    {
+                        foreach (string file in getfiles)
+                        {
+                            AddTexture2D(Path.GetFileName(file), chlidPath, true);
+                            BaldiTimeUI.AllComboLevels.Add(AssetMan.Get<Sprite>(Path.GetFileNameWithoutExtension(file)));
+                        }
+                    }
+                    else
+                    {
+                        Log("This pack hasn't ComboLevels: " + pack, 1);
+                    }
+                }
+                else
+                {
+                    Log("This pack hasn't ComboLevels Folder: " + pack, 1);
+                }
+            }
+        }
+        internal void AddSpoopMusics()
+        {
+            BaldiTimeActions.AllSpoopMusics.Clear();
+            string chlidPath = "AudioClips/Spoop";
+            int basePackInt = 0;
+
+            for (int i = LoadedPacks.Count - 1; i >= 0; i--)
+            {
+                string pack = LoadedPacks[i];
+                if (AllPacks[pack].replaceSpoopMusic)
+                {
+                    basePackInt = i;
+                    break;
+                }
+            }
+
+            for (int i = LoadedPacks.Count - 1; i >= basePackInt; i--)
+            {
+                string pack = LoadedPacks[i];
+                string packPath = Path.Combine(AssetLoader.GetModPath(this), "ResourcePacks", pack, chlidPath);
+                if (Directory.Exists(packPath))
+                { 
+                    string[] getfiles = Directory.GetFiles(packPath, "*.ogg", SearchOption.TopDirectoryOnly);
+                    if (getfiles.Length > 0)
+                    {
+                        foreach (string file in getfiles)
+                        {
+                            AudioClip audio = AssetLoader.AudioClipFromFile(file);
+                            audio.name = Path.GetFileNameWithoutExtension(file);
+                            BaldiTimeActions.AllSpoopMusics.Add(audio);
+                        }
+                    }
+                }
+            }
+        }
+        internal void AddLapMusics()
+        {
+            string chlidPath = "AudioClips/Laps";
+            string fileNameWithExtension = "Lap1-Loop.ogg";
+            string selectedPack = null;
+
+            for (int i = LoadedPacks.Count - 1; i >= 0; i--)
+            {
+                string pack = LoadedPacks[i];
+                string file = Path.Combine(AssetLoader.GetModPath(this), "ResourcePacks", pack, chlidPath, fileNameWithExtension);
+                if (File.Exists(file))
+                {
+                    selectedPack = pack;
+                    break;
+                }
+            }
+            if (selectedPack == null)
+            {
+                Log("Can't load Lap1 musics, Because not every files are exists (Must has Lap1-Loop.ogg).", 2);
+            }
+            else
+            {
+                AddAudioClip("Lap1-Intro.ogg", "AudioClips/Laps", selectedPack);
+                AddAudioClip("Lap1-Loop.ogg", "AudioClips/Laps", selectedPack);
+                AddAudioClip("Lap1-Intro.ogg", "AudioClips/Laps", selectedPack);
+            }
+
+            fileNameWithExtension = "Lap2-Loop.ogg";
+            selectedPack = null;
+            for (int i = LoadedPacks.Count - 1; i >= 0; i--)
+            {
+                string pack = LoadedPacks[i];
+                string file = Path.Combine(AssetLoader.GetModPath(this), "ResourcePacks", pack, chlidPath, fileNameWithExtension);
+                if (File.Exists(file))
+                {
+                    selectedPack = pack;
+                    break;
+                }
+            }
+            if (selectedPack == null)
+            {
+                Log("Can't load Lap2 musics, Because not every files are exists (Must has Lap2-Loop.ogg).", 2);
+            }
+            else
+            {
+                AddAudioClip("Lap2-Intro.ogg", "AudioClips/Laps", selectedPack);
+                AddAudioClip("Lap2-Loop.ogg", "AudioClips/Laps", selectedPack);
+            }
+        }
+        internal void AddTexture2D(string fileNameWithExtension, string chlidPath, bool btwSprite = false, float pixelsPerUnit = 50f)
+        {
+            bool failed = true;
+            for (int i = LoadedPacks.Count - 1; i >= 0; i--)
+            {
+                string pack = LoadedPacks[i];
+                string file = Path.Combine(AssetLoader.GetModPath(this), "ResourcePacks", pack, chlidPath, fileNameWithExtension);
+
+                //Log("Adding: " + Path.GetFileName(file));
+                //Log(file);
+
+                if (File.Exists(file))
+                {
+                    AssetMan.Add(Path.GetFileNameWithoutExtension(file), AssetLoader.TextureFromFile(file));
+                    if (btwSprite)
+                    {
+                        Texture2D texture2D = AssetMan.Get<Texture2D>(Path.GetFileNameWithoutExtension(file));
+                        AssetMan.Add(Path.GetFileNameWithoutExtension(file), AssetLoader.SpriteFromTexture2D(texture2D, pixelsPerUnit));
+                    }
+                    failed = false;
+                    break;
+                }
+            }
+            if (failed)
+            {
+                string file = Path.Combine(chlidPath, fileNameWithExtension);
+                Log("File not found: " + file, 1);
+            }
+        }
+        internal void AddTexture2D(string fileNameWithExtension, string chlidPath, Vector2 vector2, float pixelsPerUnit = 50f)
+        {
+            bool failed = true;
+            for (int i = LoadedPacks.Count - 1; i >= 0; i--)
+            {
+                string pack = LoadedPacks[i];
+                string file = Path.Combine(AssetLoader.GetModPath(this), "ResourcePacks", pack, chlidPath, fileNameWithExtension);
+                if (File.Exists(file))
+                {
+                    AssetMan.Add(Path.GetFileNameWithoutExtension(file), AssetLoader.TextureFromFile(file));
+                    Texture2D texture2D = AssetMan.Get<Texture2D>(Path.GetFileNameWithoutExtension(file));
+                    AssetMan.Add(Path.GetFileNameWithoutExtension(file), AssetLoader.SpriteFromTexture2D(texture2D, vector2, pixelsPerUnit));
+                    failed = false;
+                    break;
+                }
+            }
+            if (failed)
+            {
+                string file = Path.Combine(chlidPath, fileNameWithExtension);
+                Log("File not found: " + file, 1);
+            }
+        }
+        internal void AddSoundObject(string fileNameWithExtension, string chlidPath, string subtitle = "Nothing", SoundType soundType = SoundType.Effect, float sublength = 0f)
+        {
+            bool failed = true;
+            for (int i = LoadedPacks.Count - 1; i >= 0; i--)
+            {
+                string pack = LoadedPacks[i];
+                string file = Path.Combine(AssetLoader.GetModPath(this), "ResourcePacks", pack, chlidPath, fileNameWithExtension);
+                if (File.Exists(file))
+                {
+                    SoundObject soundObject = ObjectCreators.CreateSoundObject(AssetLoader.AudioClipFromFile(file), subtitle, soundType, Color.white, sublength);
+                    AssetMan.Add(Path.GetFileNameWithoutExtension(file), soundObject);
+                    failed = false;
+                    break;
+                }
+            }
+            if (failed)
+            {
+                string file = Path.Combine(chlidPath, fileNameWithExtension);
+                Log("File not found: " + file, 1);
+            }
+        }
+        internal void AddAudioClip(string fileNameWithExtension, string chlidPath, string selectedPack = null)
+        {
+            if (selectedPack != null)
+            {
+                string file = Path.Combine(AssetLoader.GetModPath(this), "ResourcePacks", selectedPack, chlidPath, fileNameWithExtension);
+                if (File.Exists(file))
+                {
+                    AssetMan.Add(Path.GetFileNameWithoutExtension(file), AssetLoader.AudioClipFromFile(file));
+                }
+                else
+                {
+                    file = Path.Combine(chlidPath, fileNameWithExtension);
+                    Log("File not found: " + file, 1);
+                }
                 return;
             }
-            string getfile = getfiles[0];
-            AssetMan.Add(Path.GetFileNameWithoutExtension(getfile), AssetLoader.TextureFromFile(getfile));
+
+            bool failed = true;
+            for (int i = LoadedPacks.Count - 1; i >= 0; i--)
+            {
+                string pack = LoadedPacks[i];
+                string file = Path.Combine(AssetLoader.GetModPath(this), "ResourcePacks", pack, chlidPath, fileNameWithExtension);
+                if (File.Exists(file))
+                {
+                    AssetMan.Add(Path.GetFileNameWithoutExtension(file), AssetLoader.AudioClipFromFile(file));
+                    failed = false;
+                    break;
+                }
+            }
+            if (failed)
+            {
+                string file = Path.Combine(chlidPath, fileNameWithExtension);
+                Log("File not found: " + file, 1);
+            }
         }
-        private void AddEnglishLocalization(string fileNameWithExtension)
+        internal void AddTexture2DInCore(string fileNameWithExtension, bool btwSprite = true, float pixelsPerUnit = 50f)
         {
-            string[] getfiles = Directory.GetFiles(AssetLoader.GetModPath(this), fileNameWithExtension);
+            string file = Path.Combine(AssetLoader.GetModPath(this), ".Core", fileNameWithExtension);
+            if (File.Exists(file))
+            {
+                AssetMan.Add(Path.GetFileNameWithoutExtension(file), AssetLoader.TextureFromFile(file));
+                if (btwSprite)
+                {
+                    Texture2D texture2D = AssetMan.Get<Texture2D>(Path.GetFileNameWithoutExtension(file));
+                    AssetMan.Add(Path.GetFileNameWithoutExtension(file), AssetLoader.SpriteFromTexture2D(texture2D, pixelsPerUnit));
+                }
+            }
+            else
+            {
+                Log("File not found: " + file, 2);
+            }
+        }
+        internal void AddTexture2DInCore(string fileNameWithExtension, Vector2 vector2, float pixelsPerUnit = 50f)
+        {
+            string file = Path.Combine(AssetLoader.GetModPath(this), ".Core", fileNameWithExtension);
+            if (File.Exists(file))
+            {
+                AssetMan.Add(Path.GetFileNameWithoutExtension(file), AssetLoader.TextureFromFile(file));
+                Texture2D texture2D = AssetMan.Get<Texture2D>(Path.GetFileNameWithoutExtension(file));
+                AssetMan.Add(Path.GetFileNameWithoutExtension(file), AssetLoader.SpriteFromTexture2D(texture2D, vector2, pixelsPerUnit));
+            }
+            else
+            {
+                Log("File not found: " + file, 2);
+            }
+        }
+        internal void AddMidiInCore(string fileNameWithExtension)
+        {
+            string file = Path.Combine(AssetLoader.GetModPath(this), ".Core", fileNameWithExtension);
+            if (File.Exists(file))
+            {
+                AssetLoader.MidiFromFile(fileNameWithExtension, Path.GetFileNameWithoutExtension(file));
+            }
+            else
+            {
+                Log("File not found: " + file, 2);
+            }
+        }
+        internal void AddEnglishLocalization(string fileNameWithExtension, string chlidPath)
+        {
+            string path = Path.Combine(AssetLoader.GetModPath(this) , chlidPath);
+            if (!Directory.Exists(path))
+            {
+                Debug.LogError("Directory not found: " + path);
+                return;
+            }
+            string[] getfiles = Directory.GetFiles(path, fileNameWithExtension);
             if (getfiles.Length <= 0)
             {
-                Debug.LogError("File not found: " + AssetLoader.GetModPath(this) + "/" + fileNameWithExtension);
+                Debug.LogError("File not found: " + path + "/" + fileNameWithExtension);
                 return;
             }
             string getfile = getfiles[0];
             AssetLoader.LocalizationFromFile(getfile, Language.English);
         }
-        private void Texture2DToSprite(string fileName, float pixelsPerUnit = 100f)
+
+        internal void Log(object data, int level = 0)
         {
-            Texture2D texture2D = AssetMan.Get<Texture2D>(fileName);
-            Sprite sprite = Sprite.Create(texture2D, new Rect(0, 0, texture2D.width, texture2D.height), new Vector2(0.5f, 0.5f), pixelsPerUnit);
-            sprite.name = fileName;
-            AssetMan.Add(fileName, sprite);
-        }
-        private void Texture2DToSprite(string fileName, Vector2 vector2, float pixelsPerUnit = 100f)
-        {
-            Texture2D texture2D = AssetMan.Get<Texture2D>(fileName);
-            Sprite sprite = Sprite.Create(texture2D, new Rect(0, 0, texture2D.width, texture2D.height), vector2, pixelsPerUnit);
-            sprite.name = fileName;
-            AssetMan.Add(fileName, sprite);
-        }
-        private void TextureSheetToSprite(string fileName, float rectX, float rectY, string spriteName)
-        {
-            Texture2D texture2D = AssetMan.Get<Texture2D>(fileName);
-            Sprite sprite = Sprite.Create(texture2D, new Rect(texture2D.width / rectX * rectY, 0, texture2D.width / rectX, texture2D.height), new Vector2(0.5f, 0.5f));
-            sprite.name = spriteName;
-            AssetMan.Add(spriteName, sprite);
-        }
-        private void AddSoundObject(string fileNameWithExtension, string chlidPath, bool must = false)
-        {
-            string[] getfiles = Directory.GetFiles(AssetLoader.GetModPath(this) + "/" + chlidPath + "/", fileNameWithExtension);
-            if (getfiles.Length <= 0)
+            if (level == 1)
             {
-                if (must)
-                {
-                    Debug.LogError("File not found: " + AssetLoader.GetModPath(this) + "/" + chlidPath + "/" + fileNameWithExtension);
-                }
-                return;
+                Logger.LogWarning(data);
             }
-            string getfile = getfiles[0];
-            SoundObject soundObject = ObjectCreators.CreateSoundObject(AssetLoader.AudioClipFromFile(getfile), "Nothing", SoundType.Music, Color.white, 0f);
-            AssetMan.Add(Path.GetFileNameWithoutExtension(getfile), soundObject);
-        }
-        private void AddAudioClip(string fileNameWithExtension, string chlidPath, bool must = false)
-        {
-            string[] getfiles = Directory.GetFiles(AssetLoader.GetModPath(this) + "/" + chlidPath + "/", fileNameWithExtension);
-            if (getfiles.Length <= 0)
+            else if (level == 2)
             {
-                if (must)
-                {
-                    Debug.LogError("File not found: " + AssetLoader.GetModPath(this) + "/" + chlidPath + "/" + fileNameWithExtension);
-                }
-                return;
+                Logger.LogError(data);
             }
-            string getfile = getfiles[0];
-            AssetMan.Add(Path.GetFileNameWithoutExtension(getfile), AssetLoader.AudioClipFromFile(getfile));
-        }
-        private void AddMidi(string fileNameWithExtension, string chlidPath, bool must = true)
-        {
-            string[] getfiles = Directory.GetFiles(AssetLoader.GetModPath(this) + "/" + chlidPath + "/", fileNameWithExtension);
-            if (getfiles.Length <= 0)
+            else
             {
-                if (must)
-                {
-                    Debug.LogError("File not found: " + AssetLoader.GetModPath(this) + "/" + chlidPath + "/" + fileNameWithExtension);
-                }
-                return;
+                Logger.LogInfo(data);
             }
-            AssetLoader.MidiFromFile(getfiles[0], Path.GetFileNameWithoutExtension(getfiles[0]));
         }
-        /*
-        //---------------------------------------------------------------------
-        private void QuickAddAudioClip(string audioClipNameWithExtension)
-        {
-            string getfile = Directory.GetFiles(AssetLoader.GetModPath(this), audioClipNameWithExtension)[0];
-            AssetMan.Add<AudioClip>(Path.GetFileNameWithoutExtension(getfile), AssetLoader.AudioClipFromFile(getfile));
-        }
-        private void QuickAddAudioClip(string audioClipNameWithExtension, string chlidPath)
-        {
-            string getfile = Directory.GetFiles(AssetLoader.GetModPath(this) + "/" + chlidPath + "/", audioClipNameWithExtension)[0];
-            AssetMan.Add<AudioClip>(Path.GetFileNameWithoutExtension(getfile), AssetLoader.AudioClipFromFile(getfile));
-        }
-        //---------------------------------------------------------------------
-        private SoundObject QuickSetupSoundObject(string soundObjectNameWithExtension, string Localization, SoundType soundType, UnityEngine.Color color, float subtitlelength)
-        {
-            string getfile = Directory.GetFiles(AssetLoader.GetModPath(this), soundObjectNameWithExtension)[0];
-            SoundObject soundObject = ObjectCreators.CreateSoundObject(AssetLoader.AudioClipFromFile(getfile), Localization, soundType, color, subtitlelength);
-            return soundObject;
-        }
-        private SoundObject QuickSetupSoundObject(string soundObjectNameWithExtension, string chlidPath, string Localization, SoundType soundType, UnityEngine.Color color, float subtitlelength)
-        {
-            string getfile = Directory.GetFiles(AssetLoader.GetModPath(this) + "/" + chlidPath + "/", soundObjectNameWithExtension)[0];
-            SoundObject soundObject = ObjectCreators.CreateSoundObject(AssetLoader.AudioClipFromFile(getfile), Localization, soundType, color, subtitlelength);
-            return soundObject;
-        }
-        //---------------------------------------------------------------------
-        private void QuickAddMidi(string midiNameWithExtension)
-        {
-            string getfile = Directory.GetFiles(AssetLoader.GetModPath(this), midiNameWithExtension)[0];
-            AssetLoader.MidiFromFile(getfile, Path.GetFileNameWithoutExtension(getfile));
-        }*/
     }
 }

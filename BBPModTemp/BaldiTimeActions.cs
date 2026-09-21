@@ -1,44 +1,36 @@
-﻿using HarmonyLib;
-using MTM101BaldAPI.AssetTools;
+﻿using MTM101BaldAPI.AssetTools;
 using MTM101BaldAPI.Reflection;
 using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
 using UnityEngine;
 
 namespace ItsBaldiTimeRework
 {
     public class BaldiTimeActions
     {
-        public static SoundObject JOHN_PILLAR_IMPACT = null;
         public static int lap = 0;
         public static float pizzaTimer = 0f;
         public static float pizzaTimerTotal = 0f;
         public static bool itsBaldiTime = false;
-        public static List<string> AllMus = new List<string>();
-        public static List<string> F1Mus = new List<string>();
-        public static List<string> F2Mus = new List<string>();
-        public static List<string> F3Mus = new List<string>();
-        public static List<string> F4Mus = new List<string>();
-        public static List<string> F5Mus = new List<string>();
+        public static List<AudioClip> AllSpoopMusics = new List<AudioClip>();
         public static List<NPC> toppins = new List<NPC>();
-        public static Sprite Notebook_John = null;
         public static float points = 0f;
         public static float comboPoints = 0f;
         public static float pointsForPRank = 0f;
-        public static string[] ranks = new string[8] { "D", "C", "B", "A", "S", "P", "L", "X" };
+        public static List<string> ranks = new List<string> { "D", "C", "B", "A", "S", "P", "L", "X" };
         public static string rank = "D";
         public static float combo = 0f;
         public static float comboTimer = 0f;
-        public static float comboTimerMax = 15f;
+        public static float comboTimerMax = 20f;
         public static bool comboKeep = true;
         public static bool enteringLap = false;
         public static int notebookmax = 4;
+        public static float staminaOld = 100f;
 
         public static void AddCombo(float comboAdd, float time = 1225f)
         {
             combo += comboAdd;
-            comboPoints += 100f;
+            comboPoints += 100f * comboAdd;
             if (combo <= 0f)
             {
                 return;
@@ -48,6 +40,19 @@ namespace ItsBaldiTimeRework
             {
                 comboTimer = comboTimerMax;
             }
+        }
+        public static IEnumerator StopMidi(BaseGameManager baseGameManager)
+        {
+            for (int i = 0; i < 10; i++)
+            {
+                if (baseGameManager == null)
+                {
+                    yield break;
+                }
+                Singleton<MusicManager>.Instance.StopMidi();
+                yield return null;
+            }
+            yield break;
         }
         public static IEnumerator ComboMechanism(BaseGameManager baseGameManager)
         {
@@ -64,7 +69,14 @@ namespace ItsBaldiTimeRework
                     }
                     if (comboTimer > 0f)
                     {
-                        comboTimer -= Time.deltaTime * baseGameManager.Ec.EnvironmentTimeScale;
+                        if (ElevatorScreenPatches.death)
+                        {
+                            comboTimer -= Time.deltaTime * baseGameManager.Ec.EnvironmentTimeScale;
+                        }
+                        else
+                        {
+                            comboTimer = comboTimerMax;
+                        }
                         if (combo % 5 == 0f && !idktoo)
                         {
                             idktoo = true;
@@ -98,33 +110,13 @@ namespace ItsBaldiTimeRework
         }
         public static void Setup(BaseGameManager baseGameManager)
         {
+            staminaOld = Singleton<CoreGameManager>.Instance.GetPlayer(0).plm.StaminaMax;
             notebookmax = baseGameManager.Ec.notebookTotal;
             points = 0f;
             comboPoints = 0f;
             pointsForPRank = 0f;
             rank = "D";
             List<RandomEvent> events = baseGameManager.Ec.ReflectionGetVariable("events") as List<RandomEvent>;
-            /*RandomEvent a = null;
-            RandomEvent b = null;
-            for (int i = 0; i < events.Count; i++)
-            {
-                if (events[i].Type == RandomEventType.TimeOut)
-                {
-                    a = events[i];
-                }
-                if (events[i].Type == RandomEventType.Lockdown)
-                {
-                    b = events[i];
-                }
-            }
-            if (a != null)
-            {
-                events.Remove(a);
-            }
-            if (b != null)
-            {
-                events.Remove(b);
-            }*/
             foreach (RandomEvent randomEvent in events)
             {
                 if (randomEvent.Type == RandomEventType.TimeOut)
@@ -162,6 +154,7 @@ namespace ItsBaldiTimeRework
                         {
                             item.free = false;
                             item.price = 12251225;
+                            item.itemSprite.sprite = BasePlugin.AssetMan.Get<Sprite>("BaldiClockIcon_Large_Transparent");
                         }
                     }
                 }
@@ -179,59 +172,16 @@ namespace ItsBaldiTimeRework
             {
                 int num = Random.Range(0, SpawnableRooms.Count);
                 baseGameManager.Ec.SpawnNPC(BasePlugin.AssetMan.Get<Toppin>("Toppin"), SpawnableRooms[num].RandomEntitySafeCellNoGarbage().position);
-                pointsForPRank += 1225f;
+                pointsForPRank += 1000f;
             }
             int mun = Random.Range(0, SpawnableRooms.Count);
             baseGameManager.Ec.SpawnNPC(BasePlugin.AssetMan.Get<LapPortal>("LapPortal"), SpawnableRooms[mun].RandomEntitySafeCellNoGarbage().position);
             pointsForPRank += 3000f;
-            /*int spawnToppins = 5;
-            bool lapPortalSpawned = false;
-            if (baseGameManager.Ec.rooms.Count > 0)
-            {
-                for (int i = 0; i < baseGameManager.Ec.rooms.Count; i++)
-                {
-                    if (spawnToppins <= 0)
-                    {
-                        break;
-                    }
-                    RoomController room = baseGameManager.Ec.rooms[i];
-                    RoomCategory category = room.category;
-                    if (category == RoomCategory.Class || category == RoomCategory.Faculty || category == RoomCategory.Office)
-                    {
-                        int num = Random.Range(0, baseGameManager.Ec.rooms.Count);
-                        if (num < 5 || i >= baseGameManager.Ec.rooms.Count - spawnToppins)
-                        {
-                            baseGameManager.Ec.SpawnNPC(BasePlugin.AssetMan.Get<Toppin>("Toppin"), room.RandomEntitySafeCellNoGarbage().position);
-                            pointsForPRank += 1225f;
-                            spawnToppins -= 1;
-                        }
-                        if ((num < 7 || i >= baseGameManager.Ec.rooms.Count - 1) && !lapPortalSpawned)
-                        {
-                            baseGameManager.Ec.SpawnNPC(BasePlugin.AssetMan.Get<LapPortal>("LapPortal"), room.RandomEntitySafeCellNoGarbage().position);
-                            lapPortalSpawned = true;
-                        }
-                    }
-                }
-            }
-            if (spawnToppins > 0 && baseGameManager.Ec.cells.Length > 0)
-            {
-                while (spawnToppins > 0)
-                {
-                    baseGameManager.Ec.SpawnNPC(BasePlugin.AssetMan.Get<Toppin>("Toppin"), baseGameManager.Ec.RandomCell(false, false, true).position);
-                    pointsForPRank += 1225f;
-                    spawnToppins -= 1;
-                }
-            }
-            if (!lapPortalSpawned && baseGameManager.Ec.cells.Length > 0)
-            {
-                baseGameManager.Ec.SpawnNPC(BasePlugin.AssetMan.Get<LapPortal>("LapPortal"), baseGameManager.Ec.RandomCell(false, false, true).position);
-                lapPortalSpawned = true;
-            }*/
             foreach (Activity activity in baseGameManager.Ec.activities)
             {
                 if (activity.GetType() == typeof(NoActivity))
                 {
-                    pointsForPRank += 1000f;
+                    pointsForPRank += 100f;
                 }
                 else
                 {
@@ -241,6 +191,7 @@ namespace ItsBaldiTimeRework
             pointsForPRank += 3000f;
             //baseGameManager.StartCoroutine(WaitForRun(baseGameManager));
             baseGameManager.StartCoroutine(ComboMechanism(baseGameManager));
+            baseGameManager.StartCoroutine(StopMidi(baseGameManager));
             Start(baseGameManager);
         }
         public static void Reset()
@@ -295,37 +246,36 @@ namespace ItsBaldiTimeRework
             {
                 baseGameManager.Ec.GetBaldi().Despawn();
             }
-            List<string> chaseMusics = new List<string>();
-            if (Singleton<CoreGameManager>.Instance.sceneObject.levelTitle == "F1")
+
+            if (!BasePlugin.IsNullscapeinBBInstalled)
             {
-                chaseMusics.AddRange(F1Mus);
-                chaseMusics.AddRange(AllMus);
+                List<AudioClip> chaseMusics = new List<AudioClip>();
+                if (AllSpoopMusics.Count > 0)
+                {
+                    foreach (AudioClip music in AllSpoopMusics)
+                    {
+                        string levelTitle = Singleton<CoreGameManager>.Instance.sceneObject.levelTitle;
+                        chaseMusics.Add(music);
+
+                        /*bool StartWithF = levelTitle.StartsWith("F");
+                        if (music.name.Contains("_" + Singleton<CoreGameManager>.Instance.sceneObject.levelTitle) || !StartWithF)
+                        {
+                            chaseMusics.Add(music);
+                        }
+                        if (!music.name.Contains("_F1") && !music.name.Contains("_F2") && !music.name.Contains("_F3") && !music.name.Contains("_F4") && !music.name.Contains("_F5"))
+                        {
+                            chaseMusics.Add(music);
+                        }*/
+                    }
+                }
+                if (chaseMusics.Count > 0)
+                {
+                    AudioClip choosedMusic = chaseMusics[Random.Range(0, chaseMusics.Count - 1)];
+                    BaseGameManagerPatches.musPlayer.Stop();
+                    BaseGameManagerPatches.musPlayer.Play(choosedMusic, true);
+                }
             }
-            else if (Singleton<CoreGameManager>.Instance.sceneObject.levelTitle == "F2")
-            {
-                chaseMusics.AddRange(F2Mus);
-                chaseMusics.AddRange(AllMus);
-            }
-            else if (Singleton<CoreGameManager>.Instance.sceneObject.levelTitle == "F3")
-            {
-                chaseMusics.AddRange(F3Mus);
-                chaseMusics.AddRange(AllMus);
-            }
-            else if (Singleton<CoreGameManager>.Instance.sceneObject.levelTitle == "F4")
-            {
-                chaseMusics.AddRange(F4Mus);
-                chaseMusics.AddRange(AllMus);
-            }
-            else if (Singleton<CoreGameManager>.Instance.sceneObject.levelTitle == "F5")
-            {
-                chaseMusics.AddRange(F5Mus);
-                chaseMusics.AddRange(AllMus);
-            }
-            if (chaseMusics.Count > 0)
-            {
-                BaseGameManagerPatches.musPlayer.Stop();
-                BaseGameManagerPatches.musPlayer.Play(chaseMusics[Random.Range(0, chaseMusics.Count - 1)], true);
-            }
+
             Object.Destroy(MainGameManagerPatches.happyBaldi.gameObject);
             MainGameManagerPatches.happyBaldi = null;
             Singleton<CoreGameManager>.Instance.GetHud(0).StartCoroutine(BaldiTimeUI.Flash(baseGameManager));
@@ -340,7 +290,7 @@ namespace ItsBaldiTimeRework
             baseGameManager.Ec.StartEventTimers();
             if (Singleton<CoreGameManager>.Instance.currentMode == Mode.Main)
             {
-                RoomController Office = null ;
+                RoomController Office = null;
                 foreach (RoomController room in baseGameManager.Ec.rooms)
                 {
                     RoomCategory category = room.category;
@@ -359,37 +309,36 @@ namespace ItsBaldiTimeRework
             {
                 baseGameManager.Ec.GetBaldi().Despawn();
             }
-            List<string> chaseMusics = new List<string>();
-            if (Singleton<CoreGameManager>.Instance.sceneObject.levelTitle == "F1")
+
+            if (!BasePlugin.IsNullscapeinBBInstalled)
             {
-                chaseMusics.AddRange(F1Mus);
-                chaseMusics.AddRange(AllMus);
+                List<AudioClip> chaseMusics = new List<AudioClip>();
+                if (AllSpoopMusics.Count > 0)
+                {
+                    foreach (AudioClip music in AllSpoopMusics)
+                    {
+                        string levelTitle = Singleton<CoreGameManager>.Instance.sceneObject.levelTitle;
+                        chaseMusics.Add(music);
+
+                        /*bool StartWithF = levelTitle.StartsWith("F");
+                        if (music.name.Contains("_" + Singleton<CoreGameManager>.Instance.sceneObject.levelTitle) || !StartWithF)
+                        {
+                            chaseMusics.Add(music);
+                        }
+                        if (!music.name.Contains("_F1") && !music.name.Contains("_F2") && !music.name.Contains("_F3") && !music.name.Contains("_F4") && !music.name.Contains("_F5"))
+                        {
+                            chaseMusics.Add(music);
+                        }*/
+                    }
+                }
+                if (chaseMusics.Count > 0)
+                {
+                    AudioClip choosedMusic = chaseMusics[Random.Range(0, chaseMusics.Count - 1)];
+                    BaseGameManagerPatches.musPlayer.Stop();
+                    BaseGameManagerPatches.musPlayer.Play(choosedMusic, true);
+                }
             }
-            else if (Singleton<CoreGameManager>.Instance.sceneObject.levelTitle == "F2")
-            {
-                chaseMusics.AddRange(F2Mus);
-                chaseMusics.AddRange(AllMus);
-            }
-            else if (Singleton<CoreGameManager>.Instance.sceneObject.levelTitle == "F3")
-            {
-                chaseMusics.AddRange(F3Mus);
-                chaseMusics.AddRange(AllMus);
-            }
-            else if (Singleton<CoreGameManager>.Instance.sceneObject.levelTitle == "F4")
-            {
-                chaseMusics.AddRange(F4Mus);
-                chaseMusics.AddRange(AllMus);
-            }
-            else if (Singleton<CoreGameManager>.Instance.sceneObject.levelTitle == "F5")
-            {
-                chaseMusics.AddRange(F5Mus);
-                chaseMusics.AddRange(AllMus);
-            }
-            if (chaseMusics.Count > 0)
-            {
-                BaseGameManagerPatches.musPlayer.Stop();
-                BaseGameManagerPatches.musPlayer.Play(chaseMusics[Random.Range(0, chaseMusics.Count - 1)], true);
-            }
+
             baseGameManager.StartCoroutine(WaitForLastNotebook(baseGameManager));
         }
         public static IEnumerator WaitForLastNotebook(BaseGameManager baseGameManager)
@@ -397,7 +346,7 @@ namespace ItsBaldiTimeRework
             int notebookTotal = baseGameManager.Ec.notebookTotal;
             while (baseGameManager.FoundNotebooks < notebookTotal - 1)
             {
-                if (Notebook_John == null)
+                if (BasePlugin.AssetMan.Get<Sprite>("Notebook_John") == null)
                 {
                     yield break;
                 }
@@ -426,6 +375,19 @@ namespace ItsBaldiTimeRework
                 foreach (PowerLeverController powerLeverController in powerLeverControllers)
                 {
                     poweredRooms.Add(powerLeverController.PoweredRoom);
+                }
+            }
+            List<RoomController> rooms = baseGameManager.Ec.rooms;
+            foreach (RoomController room in rooms)
+            {
+                List<Pickup> items = room.pickups;
+                foreach (Pickup item in items)
+                {
+                    if (item.item == BasePlugin.AssetMan.Get<ItemObject>("BaldiClock"))
+                    {
+                        item.free = true;
+                        item.itemSprite.sprite = BasePlugin.AssetMan.Get<Sprite>("BaldiClockIcon_Large");
+                    }
                 }
             }
             if (lap == 1)
@@ -482,46 +444,50 @@ namespace ItsBaldiTimeRework
             baseGameManager.CollectNotebooks(0);
             Singleton<MusicManager>.Instance.StopMidi();
             Singleton<CoreGameManager>.Instance.musicMan.FlushQueue(true);
-            if (lap == 1)
+            if (!BasePlugin.IsNullscapeinBBInstalled)
             {
-                if (BasePlugin.AssetMan.Get<AudioClip>("Lap1-Intro") != null)
+                if (lap == 1)
                 {
-                    if (BasePlugin.AssetMan.Get<AudioClip>("Lap1-Loop") == null)
+                    BaseGameManagerPatches.musPlayer.Stop();
+                    if (BasePlugin.AssetMan.Get<AudioClip>("Lap1-Intro") != null)
                     {
-                        BaseGameManagerPatches.musPlayer.Play("Lap1-Intro", true);
+                        if (BasePlugin.AssetMan.Get<AudioClip>("Lap1-Loop") == null)
+                        {
+                            BaseGameManagerPatches.musPlayer.Play(BasePlugin.AssetMan.Get<AudioClip>("Lap1-Intro"), true);
+                        }
+                        else
+                        {
+                            BaseGameManagerPatches.musPlayer.Queue(BasePlugin.AssetMan.Get<AudioClip>("Lap1-Intro"), BasePlugin.AssetMan.Get<AudioClip>("Lap1-Loop"));
+                        }
+                    }
+                    else if (BasePlugin.AssetMan.Get<AudioClip>("Lap1-Loop") != null)
+                    {
+                        BaseGameManagerPatches.musPlayer.Play(BasePlugin.AssetMan.Get<AudioClip>("Lap1-Loop"));
+                    }
+                    if (BasePlugin.AssetMan.Get<SoundObject>("JOHN_PILLAR_IMPACT") != null)
+                    {
+                        Singleton<CoreGameManager>.Instance.audMan.PlaySingle(BasePlugin.AssetMan.Get<SoundObject>("JOHN_PILLAR_IMPACT"));
+                    }
+                    baseGameManager.StartCoroutine(WaitUntilTimeGoesTo60Seconds(baseGameManager));
+                    baseGameManager.StartCoroutine(BaldiTimeCostPoints(baseGameManager));
+                }
+                else if (lap == 2)
+                {
+                    if (BasePlugin.AssetMan.Get<AudioClip>("Lap2-Intro") != null)
+                    {
+                        if (BasePlugin.AssetMan.Get<AudioClip>("Lap2-Loop") == null)
+                        {
+                            BaseGameManagerPatches.musPlayer.Play(BasePlugin.AssetMan.Get<AudioClip>("Lap2-Intro"), false, true);
+                        }
+                        else
+                        {
+                            BaseGameManagerPatches.musPlayer.Queue(BasePlugin.AssetMan.Get<AudioClip>("Lap2-Intro"), BasePlugin.AssetMan.Get<AudioClip>("Lap2-Loop"));
+                        }
                     }
                     else
                     {
-                        BaseGameManagerPatches.musPlayer.Queue("Lap1-Intro", "Lap1-Loop");
+                        BaseGameManagerPatches.musPlayer.Play(BasePlugin.AssetMan.Get<AudioClip>("Lap2-Loop"), true, true);
                     }
-                }
-                else if (BasePlugin.AssetMan.Get<AudioClip>("Lap1-Loop") != null)
-                {
-                    BaseGameManagerPatches.musPlayer.Play("Lap1-Loop", true);
-                }
-                if (JOHN_PILLAR_IMPACT != null)
-                {
-                    Singleton<CoreGameManager>.Instance.audMan.PlaySingle(JOHN_PILLAR_IMPACT);
-                }
-                baseGameManager.StartCoroutine(WaitUntilTimeGoesTo60Seconds(baseGameManager));
-                baseGameManager.StartCoroutine(BaldiTimeCostPoints(baseGameManager));
-            }
-            else if (lap == 2)
-            {
-                if (BasePlugin.AssetMan.Get<AudioClip>("Lap2-Intro") != null)
-                {
-                    if (BasePlugin.AssetMan.Get<AudioClip>("Lap2-Loop") == null)
-                    {
-                        BaseGameManagerPatches.musPlayer.Play("Lap2-Intro", false, true);
-                    }
-                    else
-                    {
-                        BaseGameManagerPatches.musPlayer.Queue("Lap2-Intro", "Lap2-Loop", true);
-                    }
-                }
-                else if (BasePlugin.AssetMan.Get<AudioClip>("Lap2-Loop") != null)
-                {
-                    BaseGameManagerPatches.musPlayer.Play("Lap2-Loop", true, true);
                 }
             }
             if (lap > 1 && soundObject != null)
@@ -573,9 +539,12 @@ namespace ItsBaldiTimeRework
                 }
                 yield return null;
             }
-            if (BasePlugin.AssetMan.Get<AudioClip>("Lap1-Outro") != null && lap == 1)
+            if (lap == 1)
             {
-                BaseGameManagerPatches.musPlayer.Play("Lap1-Outro", false, true);
+                if (BasePlugin.AssetMan.Get<AudioClip>("Lap1-Outro") != null)
+                {
+                    BaseGameManagerPatches.musPlayer.Play(BasePlugin.AssetMan.Get<AudioClip>("Lap1-Outro"), false, true);
+                }
             }
             while (pizzaTimer > 0f)
             {
@@ -606,6 +575,14 @@ namespace ItsBaldiTimeRework
                 {
                     pizzaTimer = 0f;
                 }
+            }
+            if (Singleton<CoreGameManager>.Instance.GetPlayer(0).plm.stamina != staminaOld)
+            {
+                if (Singleton<CoreGameManager>.Instance.GetPlayer(0).plm.stamina - staminaOld > 5f)
+                {
+                    AddCombo(0f, (Singleton<CoreGameManager>.Instance.GetPlayer(0).plm.stamina - staminaOld) / (Singleton<CoreGameManager>.Instance.GetPlayer(0).plm.StaminaMax / comboTimerMax));
+                }
+                staminaOld = Singleton<CoreGameManager>.Instance.GetPlayer(0).plm.stamina;
             }
         }
     }

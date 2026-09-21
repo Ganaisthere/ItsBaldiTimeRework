@@ -5,7 +5,7 @@ using UnityEngine;
 namespace ItsBaldiTimeRework
 {
     [ConditionalPatchMod("CustomMainMenusAPI")]
-    public class CustomMainMenu
+    public class CustomMainMenuSupport
     {
         public static string localized = "Men_BaldiTimeMenu";
         public static Sprite sprite;

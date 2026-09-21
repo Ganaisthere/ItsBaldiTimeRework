@@ -38,6 +38,9 @@
     <Reference Include="HarmonyXInterop">
       <HintPath>..\..\..\..\..\steam\steamapps\common\Baldi's Basic Plus\BepInEx\core\HarmonyXInterop.dll</HintPath>
     </Reference>
+    <Reference Include="IvanLom_API">
+      <HintPath>..\..\..\..\..\DESKTOP\新建文件夹\IvanLom_API.dll</HintPath>
+    </Reference>
     <Reference Include="Mono.Cecil">
       <HintPath>..\..\..\..\..\steam\steamapps\common\Baldi's Basic Plus\BepInEx\core\Mono.Cecil.dll</HintPath>
     </Reference>
@@ -67,6 +70,15 @@
     </Reference>
     <Reference Include="Newtonsoft.Json">
       <HintPath>..\..\..\..\..\DESKTOP\新建文件夹\Newtonsoft.Json.dll</HintPath>
+    </Reference>
+    <Reference Include="NilLib">
+      <HintPath>..\..\..\..\..\DESKTOP\新建文件夹\NilLib.dll</HintPath>
+    </Reference>
+    <Reference Include="NullscapeinBB">
+      <HintPath>..\..\..\..\..\DESKTOP\新建文件夹\NullscapeinBB.dll</HintPath>
+    </Reference>
+    <Reference Include="Raldi_Tweaks">
+      <HintPath>..\..\..\..\..\DESKTOP\新建文件夹\Raldi_Tweaks.dll</HintPath>
     </Reference>
     <Reference Include="Rewired_Core">
       <HintPath>..\..\..\..\..\steam\steamapps\common\Baldi's Basic Plus\BALDI_Data\Managed\Rewired_Core.dll</HintPath>
