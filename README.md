@@ -9,3 +9,5 @@ This is also a rework of the '<a href="https://github.com/Ganaisthere/ItsBaldiTi
 <a href="https://github.com/BepInEx/BepInEx/releases">BeplnEx</a>
 
 <a href="https://gamebanana.com/mods/383711">Baldi's Basics Plus Dev API</a>
+
+<a href="https://gamebanana.com/mods/713906">NilLib</a>
