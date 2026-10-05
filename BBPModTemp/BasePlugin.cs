@@ -18,8 +18,9 @@ using static BepInEx.BepInDependency;
 
 namespace ItsBaldiTimeRework
 {
-    [BepInPlugin("ganaisthere.plus.itsbalditimerework", "Its Baldi Time Reworked", "0.2.0.0")]
+    [BepInPlugin("ganaisthere.plus.itsbalditimerework", "Its Baldi Time Reworked", "0.2.1.0")]
     [BepInDependency("mtm101.rulerp.bbplus.baldidevapi")]
+    [BepInDependency("Nil.Library")]
     [BepInDependency("pixelguy.pixelmodding.baldiplus.custommainmenusapi", DependencyFlags.SoftDependency)]
     //[BepInDependency("il.modded.raldi.tweaks", DependencyFlags.SoftDependency)]//IDK why it's broken
     //[BepInDependency("Nil.NullscapeinBB", DependencyFlags.SoftDependency)]//IDK why it's broken too
@@ -241,6 +242,7 @@ namespace ItsBaldiTimeRework
             AddSpoopMusics();
 
             // SoundObjects/Effects
+            AddSoundObject("BaldiFaceLaugh.ogg", "SoundObjects/Effects");
             AddSoundObject("bellcollectsmall.ogg", "SoundObjects/Effects");
             AddSoundObject("comboup1.ogg", "SoundObjects/Effects");
             AddSoundObject("comboup2.ogg", "SoundObjects/Effects");
@@ -258,8 +260,13 @@ namespace ItsBaldiTimeRework
             AddSoundObject("rankup4.ogg", "SoundObjects/Effects");
             AddSoundObject("rankup5.ogg", "SoundObjects/Effects");
             AddSoundObject("sfx_collecttoppin.ogg", "SoundObjects/Effects");
+            AddSoundObject("sfx_explosion.ogg", "SoundObjects/Effects");
+            AddSoundObject("Explosion.wav", "SoundObjects/Effects");
             AddSoundObject("sfx_lapenter.ogg", "SoundObjects/Effects");
             AddSoundObject("sfx_lapexit.ogg", "SoundObjects/Effects");
+            AddSoundObject("sfx_taunt.ogg", "SoundObjects/Effects");
+            AddSoundObject("sfx_parry.ogg", "SoundObjects/Effects");
+            AddSoundObject("sfx_comboend.ogg", "SoundObjects/Effects");
             // SoundObjects/Effects/Rank
             AddSoundObject("Rank_D.ogg", "SoundObjects/Effects/Rank");
             AddSoundObject("Rank_C.ogg", "SoundObjects/Effects/Rank");
@@ -270,6 +277,8 @@ namespace ItsBaldiTimeRework
             AddSoundObject("Rank_L.ogg", "SoundObjects/Effects/Rank");
 
             // Textures/Entity
+            AddTexture2D("BaldiFace.png", "Textures/Entity", new Vector2(0.5f, 0.4f), 8f);
+            AddTexture2D("BaldiFace_Scraed.png", "Textures/Entity", new Vector2(0.5f, 0.4f), 8f);
             AddTexture2D("LapPortal_0.png", "Textures/Entity", true, 16f);
             AddTexture2D("LapPortal_1.png", "Textures/Entity", true, 16f);
             AddTexture2D("Toppins_0_Idle.png", "Textures/Entity", new Vector2(0.5f, 0.6f));
@@ -298,6 +307,7 @@ namespace ItsBaldiTimeRework
             AddComboLevels();
             // Textures/GUI/LapFlags
             AddTexture2D("Lap2Flag.png", "Textures/GUI/LapFlags", true);
+            AddTexture2D("Lap3Flag.png", "Textures/GUI/LapFlags", true);
             // Textures/GUI/RankDisplay
             AddTexture2D("Rank_D_0.png", "Textures/GUI/RankDisplay", true);
             AddTexture2D("Rank_D_1.png", "Textures/GUI/RankDisplay", true);
@@ -369,6 +379,8 @@ namespace ItsBaldiTimeRework
                 .Build();
             AssetMan.Add("BaldiClock", BaldiClock);
 
+            //MTM101BaldAPI.Registers.ItemMetaStorage.Instance.Get(null).tags.Contains("");
+
             yield return "Add NPCs...";
             Toppin toppin = new NPCBuilder<Toppin>(Info)
                 .SetName("Toppin")
@@ -400,6 +412,20 @@ namespace ItsBaldiTimeRework
             lapPortal.sprites[1] = AssetMan.Get<Sprite>("LapPortal_1");
             lapPortal.spriteRenderer[0].sprite = lapPortal.sprites[0];
             AssetMan.Add("LapPortal", lapPortal);
+
+            BaldiFace baldiFace = new NPCBuilder<BaldiFace>(Info)
+                .SetName("BaldiFace")
+                .SetEnum("BaldiFace")
+                .IgnorePlayerOnSpawn()
+                .SetAudioTimescaleType(TimeScaleType.Npc)
+                .AddMetaFlag(NPCFlags.StandardNoCollide)
+                .SetAirborne()
+                .IgnorePlayerVisibility()
+                .SetWanderEnterRooms()
+                .Build();
+            baldiFace.spriteRenderer[0].sprite = AssetMan.Get<Sprite>("BaldiFace");
+            //baldiFace.spriteRenderer[0].
+            AssetMan.Add("BaldiFace", baldiFace);
 
             yield break;
         }
@@ -691,7 +717,7 @@ namespace ItsBaldiTimeRework
             {
                 AddAudioClip("Lap1-Intro.ogg", "AudioClips/Laps", selectedPack);
                 AddAudioClip("Lap1-Loop.ogg", "AudioClips/Laps", selectedPack);
-                AddAudioClip("Lap1-Intro.ogg", "AudioClips/Laps", selectedPack);
+                AddAudioClip("Lap1-Outro.ogg", "AudioClips/Laps", selectedPack);
             }
 
             fileNameWithExtension = "Lap2-Loop.ogg";
@@ -714,6 +740,28 @@ namespace ItsBaldiTimeRework
             {
                 AddAudioClip("Lap2-Intro.ogg", "AudioClips/Laps", selectedPack);
                 AddAudioClip("Lap2-Loop.ogg", "AudioClips/Laps", selectedPack);
+            }
+
+            fileNameWithExtension = "Lap3-Loop.ogg";
+            selectedPack = null;
+            for (int i = LoadedPacks.Count - 1; i >= 0; i--)
+            {
+                string pack = LoadedPacks[i];
+                string file = Path.Combine(AssetLoader.GetModPath(this), "ResourcePacks", pack, chlidPath, fileNameWithExtension);
+                if (File.Exists(file))
+                {
+                    selectedPack = pack;
+                    break;
+                }
+            }
+            if (selectedPack == null)
+            {
+                Log("Can't load Lap3 musics, Because not every files are exists (Must has Lap3-Loop.ogg).", 2);
+            }
+            else
+            {
+                AddAudioClip("Lap3-Intro.ogg", "AudioClips/Laps", selectedPack);
+                AddAudioClip("Lap3-Loop.ogg", "AudioClips/Laps", selectedPack);
             }
         }
         internal void AddTexture2D(string fileNameWithExtension, string chlidPath, bool btwSprite = false, float pixelsPerUnit = 50f)

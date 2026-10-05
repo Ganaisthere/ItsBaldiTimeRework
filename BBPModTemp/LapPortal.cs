@@ -38,7 +38,7 @@ namespace ItsBaldiTimeRework
         public override void Update()
         {
             base.Update();
-            if (BaldiTimeActions.lap > 0 && BaldiTimeActions.lap < 2 && BaldiTimeActions.itsBaldiTime && Singleton<BaseGameManager>.Instance.FoundNotebooks >= Singleton<BaseGameManager>.Instance.Ec.notebookTotal)
+            if (BaldiTimeActions.lap > 0 && BaldiTimeActions.lap < 3 && BaldiTimeActions.itsBaldiTime && Singleton<BaseGameManager>.Instance.FoundNotebooks >= Singleton<BaseGameManager>.Instance.Ec.notebookTotal)
             {
                 lapPortal.spriteRenderer[0].sprite = BasePlugin.AssetMan.Get<Sprite>("LapPortal_1");
             }
@@ -54,7 +54,7 @@ namespace ItsBaldiTimeRework
         public override void OnStateTriggerStay(Entity otherEntity, Collider other, bool validCollision)
         {
             base.OnStateTriggerStay(otherEntity, other, validCollision);
-            if (!validCollision || !other.CompareTag("Player") || BaldiTimeActions.enteringLap || !(BaldiTimeActions.lap > 0 && BaldiTimeActions.lap < 2 && BaldiTimeActions.itsBaldiTime && Singleton<BaseGameManager>.Instance.FoundNotebooks >= Singleton<BaseGameManager>.Instance.Ec.notebookTotal))
+            if (!validCollision || !other.CompareTag("Player") || BaldiTimeActions.enteringLap || !(BaldiTimeActions.lap > 0 && BaldiTimeActions.lap < 3 && BaldiTimeActions.itsBaldiTime && Singleton<BaseGameManager>.Instance.FoundNotebooks >= Singleton<BaseGameManager>.Instance.Ec.notebookTotal))
             {
                 return;
             }
@@ -83,7 +83,7 @@ namespace ItsBaldiTimeRework
             float timer = 0f;
             while (timer < 1f)
             {
-                if (npc == null)
+                if (npc == null || lapportal == null)
                 {
                     yield break;
                 }
@@ -134,6 +134,8 @@ namespace ItsBaldiTimeRework
             Singleton<CoreGameManager>.Instance.GetPlayer(0).plm.Entity.SetFrozen(false);
 
             BaldiTimeActions.Lapping(Singleton<BaseGameManager>.Instance, BasePlugin.AssetMan.Get<SoundObject>("Lapping"));
+
+            BaldiTimeActions.enteringLap = false;
 
             yield break;
         }

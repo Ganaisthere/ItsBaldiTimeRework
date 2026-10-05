@@ -177,7 +177,7 @@ namespace ItsBaldiTimeRework
                     TimerBar.rectTransform.anchoredPosition = new Vector2(0f, 90f);
                 }
             }
-            else if (BaldiTimeActions.lap == 2)
+            else if (BaldiTimeActions.lap >= 2)
             {
                 GameObject LapFlag_Obj = new GameObject("LapFlag");
                 LapFlag_Obj.transform.SetParent(hudManager.Canvas().transform, false);

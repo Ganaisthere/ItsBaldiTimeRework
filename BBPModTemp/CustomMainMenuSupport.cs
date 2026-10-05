@@ -4,7 +4,7 @@ using UnityEngine;
 
 namespace ItsBaldiTimeRework
 {
-    [ConditionalPatchMod("CustomMainMenusAPI")]
+    [ConditionalPatchMod("pixelguy.pixelmodding.baldiplus.custommainmenusapi")]
     public class CustomMainMenuSupport
     {
         public static string localized = "Men_BaldiTimeMenu";

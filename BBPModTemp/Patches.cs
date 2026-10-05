@@ -142,12 +142,19 @@ namespace ItsBaldiTimeRework
 
         [HarmonyPatch("ActivityCompleted")]
         [HarmonyPostfix]
-        public static void ActivityCompletedPostfix(bool correct)
+        public static void ActivityCompletedPostfix(bool correct, BaseGameManager __instance)
         {
             if (correct)
             {
                 BaldiTimeActions.points += 225f;
                 BaldiTimeActions.AddCombo(0f);
+                /*foreach (NPC npc in __instance.Ec.Npcs)
+                {
+                    if ()
+                    {
+                    
+                    }
+                }*/
             }
         }
 
@@ -155,7 +162,6 @@ namespace ItsBaldiTimeRework
         [HarmonyPostfix]
         public static void UpdatePostfix()
         {
-            Debug.LogWarning(Singleton<PlayerFileManager>.Instance.volume[2]);
             if (Singleton<BaseGameManager>.Instance.GameMode != GameMode.HideAndSeek || Singleton<BaseGameManager>.Instance.InPitstop())
             {
                 return;

@@ -1,4 +1,5 @@
 ﻿using MTM101BaldAPI.AssetTools;
+using MTM101BaldAPI.PlusExtensions;
 using MTM101BaldAPI.Reflection;
 using System.Collections;
 using System.Collections.Generic;
@@ -50,6 +51,7 @@ namespace ItsBaldiTimeRework
                     yield break;
                 }
                 Singleton<MusicManager>.Instance.StopMidi();
+                Singleton<CoreGameManager>.Instance.musicMan.FlushQueue(true);
                 yield return null;
             }
             yield break;
@@ -94,6 +96,7 @@ namespace ItsBaldiTimeRework
                         combo = 0f;
                         comboTimer = 0f;
                         comboKeep = false;
+                        Singleton<CoreGameManager>.Instance.audMan.PlaySingle(BasePlugin.AssetMan.Get<SoundObject>("sfx_comboend"));
                         idk = false;
                     }
                 }
@@ -405,11 +408,11 @@ namespace ItsBaldiTimeRework
                     {
                         if (activity.GetType() == typeof(NoActivity))
                         {
-                            pizzaTimerTotal += 30f;
+                            pizzaTimerTotal += 35f;
                         }
                         else
                         {
-                            pizzaTimerTotal += 40f;
+                            pizzaTimerTotal += 45f;
                         }
                     }
                     if (!poweredRooms.Contains(activity.room))
@@ -444,11 +447,18 @@ namespace ItsBaldiTimeRework
             baseGameManager.CollectNotebooks(0);
             Singleton<MusicManager>.Instance.StopMidi();
             Singleton<CoreGameManager>.Instance.musicMan.FlushQueue(true);
+
+            if (lap == 1)
+            {
+                BaseGameManagerPatches.musPlayer.Stop();
+                baseGameManager.StartCoroutine(WaitUntilTimeGoesTo60Seconds(baseGameManager));
+                baseGameManager.StartCoroutine(BaldiTimeCostPoints(baseGameManager));
+                baseGameManager.StartCoroutine(StopMidi(baseGameManager));
+            }
             if (!BasePlugin.IsNullscapeinBBInstalled)
             {
                 if (lap == 1)
                 {
-                    BaseGameManagerPatches.musPlayer.Stop();
                     if (BasePlugin.AssetMan.Get<AudioClip>("Lap1-Intro") != null)
                     {
                         if (BasePlugin.AssetMan.Get<AudioClip>("Lap1-Loop") == null)
@@ -468,8 +478,6 @@ namespace ItsBaldiTimeRework
                     {
                         Singleton<CoreGameManager>.Instance.audMan.PlaySingle(BasePlugin.AssetMan.Get<SoundObject>("JOHN_PILLAR_IMPACT"));
                     }
-                    baseGameManager.StartCoroutine(WaitUntilTimeGoesTo60Seconds(baseGameManager));
-                    baseGameManager.StartCoroutine(BaldiTimeCostPoints(baseGameManager));
                 }
                 else if (lap == 2)
                 {
@@ -481,12 +489,30 @@ namespace ItsBaldiTimeRework
                         }
                         else
                         {
-                            BaseGameManagerPatches.musPlayer.Queue(BasePlugin.AssetMan.Get<AudioClip>("Lap2-Intro"), BasePlugin.AssetMan.Get<AudioClip>("Lap2-Loop"));
+                            BaseGameManagerPatches.musPlayer.Queue(BasePlugin.AssetMan.Get<AudioClip>("Lap2-Intro"), BasePlugin.AssetMan.Get<AudioClip>("Lap2-Loop"), true);
                         }
                     }
                     else
                     {
                         BaseGameManagerPatches.musPlayer.Play(BasePlugin.AssetMan.Get<AudioClip>("Lap2-Loop"), true, true);
+                    }
+                }
+                else if (lap == 3)
+                {
+                    if (BasePlugin.AssetMan.Get<AudioClip>("Lap3-Intro") != null)
+                    {
+                        if (BasePlugin.AssetMan.Get<AudioClip>("Lap3-Loop") == null)
+                        {
+                            BaseGameManagerPatches.musPlayer.Play(BasePlugin.AssetMan.Get<AudioClip>("Lap3-Intro"), false, true);
+                        }
+                        else
+                        {
+                            BaseGameManagerPatches.musPlayer.Queue(BasePlugin.AssetMan.Get<AudioClip>("Lap3-Intro"), BasePlugin.AssetMan.Get<AudioClip>("Lap3-Loop"), true);
+                        }
+                    }
+                    else
+                    {
+                        BaseGameManagerPatches.musPlayer.Play(BasePlugin.AssetMan.Get<AudioClip>("Lap3-Loop"), true, true);
                     }
                 }
             }
@@ -495,7 +521,14 @@ namespace ItsBaldiTimeRework
                 Singleton<CoreGameManager>.Instance.audMan.PlaySingle(soundObject);
                 baseGameManager.Ec.ElevatorManager.SetAllElevators(ElevatorState.OutOfOrder);
             }
+            if (lap == 3)
+            {
+                pizzaTimer = 0f;
+            }
             baseGameManager.StartCoroutine(BaldiTimeUI.LappingAnimations(baseGameManager));
+            PlayerMovementStatModifier statModifier = Singleton<CoreGameManager>.Instance.GetPlayer(0).GetMovementStatModifier();
+            statModifier.AddModifier("walkSpeed", new MTM101BaldAPI.Components.ValueModifier(1f, 2f));
+            statModifier.AddModifier("runSpeed", new MTM101BaldAPI.Components.ValueModifier(1f, 2.5f));
         }
 
         public static IEnumerator BaldiTimeCostPoints(BaseGameManager baseGameManager)
@@ -527,7 +560,7 @@ namespace ItsBaldiTimeRework
 
         public static IEnumerator WaitUntilTimeGoesTo60Seconds(BaseGameManager baseGameManager)
         {
-            while (pizzaTimer > 60f)
+            while (pizzaTimer >= 60f)
             {
                 if (baseGameManager == null)
                 {
@@ -539,11 +572,14 @@ namespace ItsBaldiTimeRework
                 }
                 yield return null;
             }
-            if (lap == 1)
+            if (!BasePlugin.IsNullscapeinBBInstalled)
             {
-                if (BasePlugin.AssetMan.Get<AudioClip>("Lap1-Outro") != null)
+                if (lap == 1)
                 {
-                    BaseGameManagerPatches.musPlayer.Play(BasePlugin.AssetMan.Get<AudioClip>("Lap1-Outro"), false, true);
+                    if (BasePlugin.AssetMan.Get<AudioClip>("Lap1-Outro") != null)
+                    {
+                        BaseGameManagerPatches.musPlayer.Play(BasePlugin.AssetMan.Get<AudioClip>("Lap1-Outro"), false, true);
+                    }
                 }
             }
             while (pizzaTimer > 0f)
@@ -554,17 +590,33 @@ namespace ItsBaldiTimeRework
                 }
                 yield return null;
             }
-            Singleton<CoreGameManager>.Instance.GetHud(0).BaldiTv.AnnounceEvent(AssetFinder.FindOfTypeWithName<SoundObject>("BAL_TimeOut", true));
+
+            /*Singleton<CoreGameManager>.Instance.GetHud(0).BaldiTv.AnnounceEvent(AssetFinder.FindOfTypeWithName<SoundObject>("BAL_TimeOut", true));
             Singleton<CoreGameManager>.Instance.audMan.PlaySingle(AssetFinder.FindOfTypeWithName<SoundObject>("TimeLimitBell", true));
-            Singleton<CoreGameManager>.Instance.GetHud(0).StartCoroutine(BaldiTimeUI.TimerBarGoDown(baseGameManager));
             yield return new WaitForSeconds(3f);
             baseGameManager.Ec.CloseSchool();
-            Object.FindObjectOfType<TimeOut>().Begin();
+            Object.FindObjectOfType<TimeOut>().Begin();*/
+
+            baseGameManager.Ec.SpawnNPC(BasePlugin.AssetMan.Get<BaldiFace>("BaldiFace"), baseGameManager.Ec.CellFromPosition(Singleton<CoreGameManager>.Instance.GetPlayer(0).transform.position).position);
+            Singleton<CoreGameManager>.Instance.GetHud(0).StartCoroutine(BaldiTimeUI.TimerBarGoDown(baseGameManager));
+
             yield break;
         }
 
         public static void Update()
         {
+            if (Singleton<BaseGameManager>.Instance == null)
+            {
+                return;
+            }
+            if (Singleton<CoreGameManager>.Instance == null)
+            {
+                return;
+            }
+            if (Singleton<CoreGameManager>.Instance.GetPlayer(0) == null)
+            {
+                return;
+            }
             if (itsBaldiTime)
             {
                 if (pizzaTimer > 0f)
