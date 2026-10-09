@@ -1,7 +1,6 @@
 ﻿using MTM101BaldAPI.AssetTools;
 using MTM101BaldAPI.OptionsAPI;
 using MTM101BaldAPI.UI;
-using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
@@ -10,7 +9,7 @@ using UnityEngine;
 
 namespace ItsBaldiTimeRework
 {
-    public class PackOptions : CustomOptionsCategory
+    public class Options_Packs : CustomOptionsCategory
     {
         public StandardMenuButton[] PackTextsButton = new StandardMenuButton[4];
         public TextMeshProUGUI PageText;
@@ -141,7 +140,6 @@ namespace ItsBaldiTimeRework
             BasePlugin.Instance.PackDescriptionText = PackDescriptionText;*/
 
             UpdatePage();
-            BasePlugin.Instance.optionsMenuBuilt = true;
         }
 
         private void UpdatePageMax()

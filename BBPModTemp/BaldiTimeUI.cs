@@ -39,7 +39,8 @@ namespace ItsBaldiTimeRework
         public static List<Sprite> AllComboLevels = new List<Sprite>();
         public static int numOld = 0;
         public static float rankAniTimer = 0f;
-
+        public static float camTimer = 0f;
+        public static float oldPoint = 0f;
 
         public static IEnumerator Flash(BaseGameManager baseGameManager)
         {
@@ -95,6 +96,24 @@ namespace ItsBaldiTimeRework
             yield break;
         }
 
+        public static IEnumerator PDAni(TMP_Text text)
+        {
+            CoreGameManager coreGameManager = Singleton<CoreGameManager>.Instance;
+
+            Vector3 vector = text.rectTransform.anchoredPosition;
+            float timer = 0f;
+            while (timer < 0.5f)
+            {
+                text.rectTransform.anchoredPosition = vector + new Vector3(0f, 64f, 0f) * timer;
+                timer += Time.unscaledDeltaTime;
+                text.color = new Color(text.color.r, text.color.g, text.color.b, 1f - timer * 2f);
+                yield return null;
+            }
+
+            Object.Destroy(text.gameObject);
+            yield break;
+        }
+
         public static IEnumerator LappingAnimations(BaseGameManager baseGameManager)
         {
             HudManager hudManager = Singleton<CoreGameManager>.Instance.GetHud(0);
@@ -122,6 +141,8 @@ namespace ItsBaldiTimeRework
                 {
                     if (baseGameManager == null)
                     {
+                        Object.Destroy(whiteFlash_Obj);
+                        Object.Destroy(baldiTimeLogo_Obj);
                         yield break;
                     }
                     if (timer < 0.5f)
@@ -193,6 +214,7 @@ namespace ItsBaldiTimeRework
                 {
                     if (baseGameManager == null)
                     {
+                        Object.Destroy(LapFlag_Obj);
                         yield break;
                     }
                     float num = math.sin(timer * math.PI / 2f);
@@ -206,6 +228,37 @@ namespace ItsBaldiTimeRework
             yield break;
         }
 
+        public static void UpdateCam(GameCamera gameCamera)
+        {
+            if (!BaldiTimeActions.itsBaldiTime)
+            {
+                return;
+            }
+            float lmd = BasePlugin.Instance.ConfigCameraShakeSpeed.Value;
+            float sd = BasePlugin.Instance.ConfigCameraShakeIntensity.Value;
+            if (BasePlugin.Instance.ConfigCameraShakeStyle.Value == CameraShakeStyle.Smooth)
+            {
+                float f0 = math.sin(camTimer * lmd * math.PI / 4f);
+                gameCamera.transform.rotation *= Quaternion.Euler(0f, 0f, f0 * sd);
+            }
+            else if (BasePlugin.Instance.ConfigCameraShakeStyle.Value == CameraShakeStyle.Beat)
+            {
+                float f0 = math.abs(camTimer % lmd);
+                float f1 = (camTimer - f0) / lmd;
+                float f2 = f1 % 2f;
+                float e0;
+                if (f2 == 0)
+                {
+                    e0 = math.sin((f0 / lmd) * math.PI / 2f + math.PI) + 1f;
+                }
+                else
+                {
+                    e0 = math.sin((f0 / lmd) * math.PI / 2f) - 1f;
+                }
+                gameCamera.transform.rotation *= Quaternion.Euler(0f, 0f, e0 * sd);
+            }
+        }
+
         public static void UpdateGUI(HudManager hudManager)
         {
             if (TimerBarBackground != null)
@@ -217,6 +270,35 @@ namespace ItsBaldiTimeRework
                 TimerBarNiddle.rectTransform.localScale = new Vector3(1f + 0.25f * math.sin(BaldiTimeActions.pizzaTimer * math.PI), 1f + 0.25f * math.sin((BaldiTimeActions.pizzaTimer + math.PI) * math.PI), 1f);
                 TimerBarTextShadow.text = string.Format("{0}:{1}", Mathf.Floor(BaldiTimeActions.pizzaTimer / 60).ToString("0"), (BaldiTimeActions.pizzaTimer % 60).ToString("00"));
                 TimerBarText.text = TimerBarTextShadow.text;
+
+                if (oldPoint != BaldiTimeActions.points + BaldiTimeActions.comboPoints)
+                {
+                    float chaju = BaldiTimeActions.points + BaldiTimeActions.comboPoints - oldPoint;
+
+                    GameObject pd_Obj = new GameObject("pd");
+                    pd_Obj.transform.SetParent(PointDisplayText.transform);
+                    TMP_Text pd = pd_Obj.AddComponent<TextMeshProUGUI>();
+                    pd.rectTransform.anchoredPosition3D = new Vector3(100f, 0f, 0f);
+                    pd.rectTransform.anchorMax = new Vector2(0f, 0.5f);
+                    pd.rectTransform.anchorMin = new Vector2(0f, 0.5f);
+                    pd.rectTransform.sizeDelta = new Vector2(200f, 30f);
+                    pd.rectTransform.localScale = Vector3.one;
+                    pd.alignment = TextAlignmentOptions.Left;
+                    pd.fontSize = 24f;
+                    pd.text = chaju.ToString();
+                    pd.color = Color.red;
+                    if (chaju > 0f)
+                    {
+                        pd.text = "+" + chaju.ToString();
+                        pd.color = Color.green;
+                    }
+
+                    oldPoint = BaldiTimeActions.points + BaldiTimeActions.comboPoints;
+
+                    BasePlugin.Instance.Log("pd");
+
+                    pd.StartCoroutine(PDAni(pd));
+                }
 
                 //Rank And PointDisplay
                 if (Singleton<BaseGameManager>.Instance != null)
@@ -262,13 +344,15 @@ namespace ItsBaldiTimeRework
                         RankOverlayMask.rectTransform.anchoredPosition = new Vector2(0f, -48f + fill * 48f);
                         RankOverlay.rectTransform.anchoredPosition = new Vector2(0f, 48f - fill * 48f);
                         RankImage.sprite = BasePlugin.AssetMan.Get<Sprite>("Rank_" + BaldiTimeActions.rank + "_0");//RankSprites0[num];
-                        if (num > 3)
+
+                        Sprite Rank_1 = BasePlugin.AssetMan.Get<Sprite>("Rank_" + BaldiTimeActions.rank + "_1");
+                        if (Rank_1 == null)
                         {
                             RankOverlay.color = new Color(0f, 0f, 0f, 0f);
                         }
                         else
                         {
-                            RankOverlay.sprite = BasePlugin.AssetMan.Get<Sprite>("Rank_" + BaldiTimeActions.rank + "_1");
+                            RankOverlay.sprite = Rank_1;
                             RankOverlay.color = new Color(1f, 1f, 1f, 1f);
                         }
 
@@ -367,6 +451,14 @@ namespace ItsBaldiTimeRework
             if (BasePlugin.IsRaldiTweaksInstalled)
             {
                 RaldiTweaksSupport.ChangeColor();
+            }
+            if (BaldiTimeActions.itsBaldiTime)
+            {
+                camTimer += Time.deltaTime;
+            }
+            else
+            {
+                camTimer = 0f;
             }
         }
         public static IEnumerator ShowComboLevels(BaseGameManager baseGameManager)

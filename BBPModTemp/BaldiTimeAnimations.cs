@@ -1,5 +1,6 @@
 ﻿using MTM101BaldAPI.AssetTools;
 using MTM101BaldAPI.Reflection;
+using MTM101BaldAPI.UI;
 using System.Collections;
 using System.Collections.Generic;
 using TMPro;
@@ -38,279 +39,15 @@ namespace ItsBaldiTimeRework
         public static List<Sprite> TitleCardBackSprites = new List<Sprite>();
         public static List<Sprite> TitleCardTitleSprites = new List<Sprite>();
         public static List<SoundObject> TitleCardSounds = new List<SoundObject>();
+        public static IEnumerator[] enumerators = new IEnumerator[2];
+        public static int TitleCardRandom = -1;
 
-        public static void RankAnimationsButVoid(AudioManager audMan, ElevatorScreen elevatorScreen)
-        {
-            Singleton<MusicManager>.Instance.StartCoroutine(RankAnimations(audMan, elevatorScreen));
-        }
-        public static IEnumerator RankAnimations(AudioManager audMan, ElevatorScreen elevatorScreen)
-        {
-            while (elevatorScreen.transform.localScale.x <= 0f)
-            {
-                yield return null;
-            }
-            while (elevatorScreen.transform.localScale != Vector3.one)
-            {
-                yield return null;
-            }
-
-            GameObject WhiteBackGround_Obj = new GameObject("WhiteBackGround");
-            WhiteBackGround_Obj.transform.SetParent(elevatorScreen.Canvas.transform, false);
-            RawImage WhiteBackGround = WhiteBackGround_Obj.AddComponent<RawImage>();
-            WhiteBackGround.rectTransform.sizeDelta = new Vector2(480f, 360f);
-            WhiteBackGround.rectTransform.anchoredPosition = new Vector2(0f, 720f);
-            WhiteBackGround.color = Color.white;
-
-            GameObject Rank_Obj = new GameObject("Rank");
-            Rank_Obj.transform.SetParent(elevatorScreen.Canvas.transform, false);
-            Image Rank = Rank_Obj.AddComponent<Image>();
-            Rank.rectTransform.sizeDelta = new Vector2(480f, 360f);
-            Rank.rectTransform.anchoredPosition = new Vector2(960f, 0f);
-            Rank.color = Color.white;
-
-            GameObject Student_Obj = new GameObject("Student");
-            Student_Obj.transform.SetParent(elevatorScreen.Canvas.transform, false);
-            Image Student = Student_Obj.AddComponent<Image>();
-            Student.rectTransform.sizeDelta = new Vector2(480f, 360f);
-            Student.rectTransform.anchoredPosition = new Vector2(960f, 0f);
-            Student.sprite = BasePlugin.AssetMan.Get<Sprite>("RankAnime_Student_0");
-            Student.color = Color.white;
-
-            GameObject Border_L_Obj = new GameObject("Border_L");
-            Border_L_Obj.transform.SetParent(elevatorScreen.Canvas.transform, false);
-            RawImage Border_L = Border_L_Obj.AddComponent<RawImage>();
-            Border_L.rectTransform.sizeDelta = new Vector2(480f, 360f);
-            Border_L.rectTransform.anchoredPosition = new Vector2(-480f, 0f);
-            Border_L.color = Color.black;
-
-            GameObject Border_R_Obj = new GameObject("Border_R");
-            Border_R_Obj.transform.SetParent(elevatorScreen.Canvas.transform, false);
-            RawImage Border_R = Border_R_Obj.AddComponent<RawImage>();
-            Border_R.rectTransform.sizeDelta = new Vector2(480f, 360f);
-            Border_R.rectTransform.anchoredPosition = new Vector2(480f, 0f);
-            Border_R.color = Color.black;//95874046
-
-            audMan.PlaySingle(BasePlugin.AssetMan.Get<SoundObject>("Rank_" + BaldiTimeActions.ranks[BaldiTimeUI.numOld]));
-            Rank.sprite = BasePlugin.AssetMan.Get<Sprite>("RankAnime_Rank_" + BaldiTimeActions.ranks[BaldiTimeUI.numOld]);
-
-            float timer = 0f;
-            while (timer <= 14f)
-            {
-                if (elevatorScreen == null)
-                {
-                    yield break;
-                }
-                elevatorScreen.ReflectionSetVariable("busy", true);
-                Singleton<MusicManager>.Instance.StopMidi();
-                if (timer <= 1f)
-                {
-                    WhiteBackGround.rectTransform.anchoredPosition = new Vector2(0f, 360f - 360f * math.sin(timer * (math.PI / 2)));
-                }
-                else
-                {
-                    WhiteBackGround.rectTransform.anchoredPosition = new Vector2(0f, 0f);
-                }
-
-                if (timer <= 1f)
-                {
-                    Student.rectTransform.anchoredPosition = new Vector2(480f - 480f * math.sin(timer * (math.PI / 2)), 0f);
-                }
-                else if (timer <= 2f)
-                {
-                    Student.rectTransform.anchoredPosition = new Vector2(0f, 0f);
-                }
-                else if (timer <= 3f)
-                {
-                    Student.rectTransform.anchoredPosition = new Vector2(-480f * (1f + math.sin((timer + 1f) * (math.PI / 2))), 0f);
-                }
-                else if (timer <= 4f)
-                {
-                    Student.sprite = BasePlugin.AssetMan.Get<Sprite>("RankAnime_Student_" + BaldiTimeActions.ranks[BaldiTimeUI.numOld]);
-                    Student.rectTransform.anchoredPosition = new Vector2(-480f + 480f * math.sin((timer - 3f) * (math.PI / 2)), 0f);
-                }
-                else
-                {
-                    Student.rectTransform.anchoredPosition = new Vector2(0f, 0f);
-                }
-
-                if (timer <= 3f)
-                {
-                    Rank.rectTransform.anchoredPosition = new Vector2(480f, 0f);
-                }
-                else if (timer <= 4f)
-                {
-                    Rank.rectTransform.anchoredPosition = new Vector2(480f - 480f * math.sin((timer - 3f) * (math.PI / 2)), 0f);
-                }
-                else if (timer <= 9.3f)
-                {
-                    Rank.rectTransform.anchoredPosition = new Vector2(0f, 0f);
-                }
-                else
-                {
-                    Rank.rectTransform.anchoredPosition = new Vector2(0f, 0f);
-                    Color color = new Color(1f, 0.5f, 0f, 1f);
-                    WhiteBackGround.color = color;
-                    Student.color = color;
-                    Rank.color = color;
-                }
-                timer += Time.unscaledDeltaTime;
-                yield return null;
-            }
-
-            Singleton<MusicManager>.Instance.PlayMidi("Elevator", true);
-            timer = 0f;
-            while (timer <= 1f)
-            {
-                timer += Time.unscaledDeltaTime;
-                WhiteBackGround.rectTransform.anchoredPosition = new Vector2(0f, -360f * math.sin(timer * (math.PI / 2)));
-                Student.rectTransform.anchoredPosition = new Vector2(0f, -360f * math.sin(timer * (math.PI / 2)));
-                Rank.rectTransform.anchoredPosition = new Vector2(0f, -360f * math.sin(timer * (math.PI / 2)));
-                yield return null;
-            }
-            Object.Destroy(WhiteBackGround_Obj);
-            Object.Destroy(Student_Obj);
-            Object.Destroy(Rank_Obj);
-            Object.Destroy(Border_L_Obj);
-            Object.Destroy(Border_R_Obj);
-
-            List<IEnumerator> queuedEnumerators = elevatorScreen.ReflectionGetVariable("queuedEnumerators") as List<IEnumerator>;
-            queuedEnumerators.Clear();
-            elevatorScreen.ReflectionSetVariable("busy", false);
-
-            yield break;
-        }
-        public static void TitleCardAnimationsButVoid(Canvas canvas, AudioManager audMan, ElevatorScreen elevatorScreen)
-        {
-            Singleton<MusicManager>.Instance.StartCoroutine(TitleCardAnimations(canvas, audMan, elevatorScreen));
-        }
-        public static IEnumerator TitleCardAnimations(Canvas canvas, AudioManager audMan, ElevatorScreen elevatorScreen)
-        {
-            int randomInt;
-            Debug.LogWarning("TitleCardBackSprites.Count = " + TitleCardBackSprites.Count);
-            Debug.LogWarning("TitleCardTitleSprites.Count = " + TitleCardTitleSprites.Count);
-            Debug.LogWarning("TitleCardSounds.Count = " + TitleCardSounds.Count);
-
-            while (elevatorScreen.transform.localScale.x <= 0f)
-            {
-                yield return null;
-            }
-            while (elevatorScreen.transform.localScale != Vector3.one)
-            {
-                yield return null;
-            }
-
-            GameObject TitleCardMain_Obj = new GameObject("TitleCardMain");
-            TitleCardMain_Obj.transform.SetParent(canvas.transform, false);
-            RawImage TitleCardMain = TitleCardMain_Obj.AddComponent<RawImage>();
-            TitleCardMain.color = new Color(0f, 0f, 0f, 0f);
-            TitleCardMain.rectTransform.sizeDelta = new Vector2(480f, 360f);
-
-            GameObject TitleCardBack_Obj = new GameObject("TitleCardBack");
-            TitleCardBack_Obj.transform.SetParent(TitleCardMain.transform, false);
-            Image TitleCardBack = TitleCardBack_Obj.AddComponent<Image>();
-            TitleCardBack.rectTransform.sizeDelta = new Vector2(480f, 360f);
-            randomInt = UnityEngine.Random.Range(0, TitleCardBackSprites.Count - 1);
-            TitleCardBack.sprite = TitleCardBackSprites[randomInt];
-
-            GameObject TitleCardTitle_Obj = new GameObject("TitleCardTitle");
-            TitleCardTitle_Obj.transform.SetParent(TitleCardMain.transform, false);
-            Image TitleCardTitle = TitleCardTitle_Obj.AddComponent<Image>();
-            TitleCardTitle.rectTransform.sizeDelta = new Vector2(480f, 360f);
-            if (TitleCardTitleSprites[randomInt] != null)
-            {
-                TitleCardTitle.sprite = TitleCardTitleSprites[randomInt];
-            }
-            else
-            {
-                TitleCardTitle.color = new Color(1f, 1f, 1f, 0f);
-            }
-
-            GameObject Flash_Obj = new GameObject("Flash");
-            Flash_Obj.transform.SetParent(TitleCardMain.transform, false);
-            RawImage Flash = Flash_Obj.AddComponent<RawImage>();
-            Flash.color = new Color(0f, 0f, 0f, 0f);
-            Flash.rectTransform.anchorMin = new Vector2(0f, 0f);
-            Flash.rectTransform.anchorMax = new Vector2(1f, 1f);
-
-            if (TitleCardSounds[randomInt] != null)
-            {
-                audMan.PlaySingle(TitleCardSounds[randomInt]);
-            }
-
-            float timer = 0f;
-            float timer0 = 0f;
-            while (timer < 4f)
-            {
-                if (elevatorScreen == null)
-                {
-                    yield break;
-                }
-                elevatorScreen.ReflectionSetVariable("busy", true);
-                Singleton<MusicManager>.Instance.StopMidi();
-                if (timer < 3f)
-                {
-                    Flash.color = new Color(0f, 0f, 0f, 0f);
-                }
-                else
-                {
-                    Flash.color = new Color(0f, 0f, 0f, timer - 3f);
-                }
-
-                if (timer < 1.5f)
-                {
-                    float edit = math.sin((timer / 1.5f) * (math.PI / 2));
-                    TitleCardBack.rectTransform.anchoredPosition = new Vector2(480f - 480f * edit, 0f);
-                    TitleCardTitle.rectTransform.anchoredPosition = new Vector2(480f - 480f * edit, 0f);
-                }
-                else
-                {
-                    TitleCardBack.rectTransform.anchoredPosition = new Vector2(0f, 0f);
-                    TitleCardTitle.rectTransform.anchoredPosition = new Vector2(0f, 0f);
-                }
-
-                if (timer0 < 0.1f)
-                {
-                    timer0 += Time.unscaledDeltaTime;
-                }
-                else
-                {
-                    timer0 = 0f;
-                    float randomFloat0 = UnityEngine.Random.Range(-2f, 2f);
-                    float randomFloat1 = UnityEngine.Random.Range(-2f, 2f);
-                    TitleCardTitle.rectTransform.anchoredPosition = new Vector2(TitleCardTitle.rectTransform.anchoredPosition.x + randomFloat0, TitleCardTitle.rectTransform.anchoredPosition.y + randomFloat1);
-                }
-
-                timer += Time.unscaledDeltaTime;
-                yield return null;
-            }
-            Object.Destroy(TitleCardBack_Obj);
-            Object.Destroy(TitleCardTitle_Obj);
-
-            List<IEnumerator> queuedEnumerators = elevatorScreen.ReflectionGetVariable("queuedEnumerators") as List<IEnumerator>;
-            queuedEnumerators.Clear();
-            elevatorScreen.ReflectionSetVariable("busy", false);
-
-            //elevatorScreen.ReflectionSetVariable("readyToStart", true);
-            //audMan.PlaySingle(AssetFinder.FindOfTypeWithName<SoundObject>("Elv_Buzz", true));
-            //elevatorScreen.UpdateFloorDisplay();
-            //elevatorScreen.ReflectionGetVariable("UpdateLives");
-            //elevatorScreen.StartGame();
-
-            timer = 0f;
-            while (timer < 1f)
-            {
-                Flash.color = new Color(0f, 0f, 0f, 1f - timer);
-                timer += Time.unscaledDeltaTime;
-                yield return null;
-            }
-            Object.Destroy(Flash_Obj);
-
-            yield break;
-        }
         public static void OpeningAnimationsButVoid(Canvas canvas, AudioSource audSource, TMP_Text textBox, MonoBehaviour monoBehaviour)
         {
-            monoBehaviour.StartCoroutine(OpeningAnimations(canvas, audSource, textBox, monoBehaviour));
-            monoBehaviour.StartCoroutine(Skip(canvas, audSource, textBox, monoBehaviour));
+            enumerators[0] = OpeningAnimations(canvas, audSource, textBox, monoBehaviour);
+            enumerators[1] = Skip(canvas, audSource, textBox, monoBehaviour);
+            monoBehaviour.StartCoroutine(enumerators[0]);
+            monoBehaviour.StartCoroutine(enumerators[1]);
         }
 
         public static IEnumerator Skip(Canvas canvas, AudioSource audSource, TMP_Text textBox, MonoBehaviour monoBehaviour)
@@ -331,7 +68,7 @@ namespace ItsBaldiTimeRework
                 }
                 yield return null;
             }
-            monoBehaviour.StopCoroutine(OpeningAnimations(canvas, audSource, textBox, monoBehaviour));
+            monoBehaviour.StopCoroutine(enumerators[0]);
             Object.Destroy(OpeningMain.gameObject);
             Object.Destroy(Border.gameObject);
             Object.Destroy(whiteFlash.gameObject);
@@ -974,7 +711,355 @@ namespace ItsBaldiTimeRework
             audSource.clip = AssetFinder.FindOfTypeWithName<AudioClip>("ErrorScreen", true);
             audSource.loop = true;
             audSource.Play();
-            monoBehaviour.StopCoroutine(Skip(canvas, audSource, textBox, monoBehaviour));
+            monoBehaviour.StopCoroutine(enumerators[1]);
+
+            yield break;
+        }
+
+        public static IEnumerator TitleCard(CoreGameManager coreGameManager, BaseGameManager baseGameManager)
+        {
+            Singleton<MusicManager>.Instance.StopMidi();
+            coreGameManager.GetCamera(0).SetControllable(false);
+            coreGameManager.GetPlayer(0).plm.Entity.SetFrozen(true);
+            coreGameManager.disablePause = true;
+            baseGameManager.Ec.PauseEnvironment(true);
+            AudioManager audMan = coreGameManager.audMan;
+
+            if (TitleCardRandom == -1)
+            {
+                TitleCardRandom = UnityEngine.Random.Range(0, TitleCardBackSprites.Count - 1);
+            }
+
+            Canvas TitleCardCanvas = UIHelpers.CreateBlankUIScreen("TitleCard", true, true);
+
+            GameObject Flash_Obj = new GameObject("Flash");
+            Flash_Obj.transform.SetParent(TitleCardCanvas.transform, false);
+            RawImage Flash = Flash_Obj.AddComponent<RawImage>();
+            Flash.color = new Color(0f, 0f, 0f, 0f);
+            Flash.rectTransform.anchoredPosition3D = Vector3.zero;
+            Flash.rectTransform.anchorMin = new Vector2(0f, 0f);
+            Flash.rectTransform.anchorMax = new Vector2(1f, 1f);
+
+            float timer = 0f;
+            while (timer < 1f)
+            {
+                if (coreGameManager == null)
+                {
+                    yield break;
+                }
+                coreGameManager.disablePause = true;
+                Flash.color = new Color(0f, 0f, 0f, timer);
+                timer += Time.unscaledDeltaTime;
+                yield return null;
+            }
+
+            GameObject TitleCardBack_Obj = new GameObject("TitleCardBack");
+            TitleCardBack_Obj.transform.SetParent(TitleCardCanvas.transform, false);
+            Image TitleCardBack = TitleCardBack_Obj.AddComponent<Image>();
+            TitleCardBack.rectTransform.anchoredPosition3D = Vector3.zero;
+            //TitleCardBack.rectTransform.sizeDelta = new Vector2(1280f, 720f);
+            TitleCardBack.rectTransform.sizeDelta = new Vector2(16f, 16f);
+            TitleCardBack.rectTransform.localScale = Vector3.one;
+            TitleCardBack.rectTransform.anchorMin = new Vector2(0f, 0f);
+            TitleCardBack.rectTransform.anchorMax = new Vector2(1f, 1f);
+            TitleCardBack.sprite = TitleCardBackSprites[TitleCardRandom];
+
+            GameObject TitleCardTitle_Obj = new GameObject("TitleCardTitle");
+            TitleCardTitle_Obj.transform.SetParent(TitleCardCanvas.transform, false);
+            Image TitleCardTitle = TitleCardTitle_Obj.AddComponent<Image>();
+            TitleCardTitle.rectTransform.anchoredPosition3D = Vector3.zero;
+            TitleCardTitle.rectTransform.sizeDelta = new Vector2(16f, 16f);
+            TitleCardTitle.rectTransform.localScale = Vector3.one;
+            TitleCardTitle.rectTransform.anchorMin = new Vector2(0f, 0f);
+            TitleCardTitle.rectTransform.anchorMax = new Vector2(1f, 1f);
+            if (TitleCardTitleSprites[TitleCardRandom] != null)
+            {
+                TitleCardTitle.sprite = TitleCardTitleSprites[TitleCardRandom];
+            }
+            else
+            {
+                TitleCardTitle.color = new Color(1f, 1f, 1f, 0f);
+            }
+
+            TitleCardTitle.transform.SetAsFirstSibling();
+            TitleCardBack.transform.SetAsFirstSibling();
+
+            while (!coreGameManager.readyToStart)
+            {
+                coreGameManager.disablePause = true;
+                yield return null;
+            }
+            timer = 0f;
+            while (timer < 0.5f)
+            {
+                if (coreGameManager == null)
+                {
+                    yield break;
+                }
+                coreGameManager.disablePause = true;
+                timer += Time.unscaledDeltaTime;
+                yield return null;
+            }
+
+            if (TitleCardSounds[TitleCardRandom] != null)
+            {
+                audMan.PlaySingle(TitleCardSounds[TitleCardRandom]);
+            }
+
+            timer = 0f;
+            while (timer < 0.5f)
+            {
+                if (coreGameManager == null)
+                {
+                    yield break;
+                }
+                Flash.color = new Color(0f, 0f, 0f, 1f - timer * 2f);
+                TitleCardTitle.rectTransform.anchoredPosition = new Vector2(UnityEngine.Random.Range(-1f, 1f), UnityEngine.Random.Range(-1f, 1f));
+                timer += Time.unscaledDeltaTime;
+                yield return null;
+            }
+
+            timer = 0f;
+            while (timer < 3.5f)
+            {
+                if (coreGameManager == null)
+                {
+                    yield break;
+                }
+                TitleCardTitle.rectTransform.anchoredPosition = new Vector2(UnityEngine.Random.Range(-1f, 1f), UnityEngine.Random.Range(-1f, 1f));
+                timer += Time.unscaledDeltaTime;
+                yield return null;
+            }
+
+            timer = 0f;
+            while (timer < 0.5f)
+            {
+                if (coreGameManager == null)
+                {
+                    yield break;
+                }
+                Flash.color = new Color(0f, 0f, 0f, timer * 2f);
+                TitleCardTitle.rectTransform.anchoredPosition = new Vector2(UnityEngine.Random.Range(-1f, 1f), UnityEngine.Random.Range(-1f, 1f));
+                timer += Time.unscaledDeltaTime;
+                yield return null;
+            }
+
+            Object.Destroy(TitleCardBack_Obj);
+            Object.Destroy(TitleCardTitle_Obj);
+
+            coreGameManager.GetCamera(0).SetControllable(true);
+            coreGameManager.GetPlayer(0).plm.Entity.SetFrozen(false);
+            baseGameManager.Ec.PauseEnvironment(false);
+            coreGameManager.disablePause = false;
+
+            //BaldiTimeActions.Setup(baseGameManager);
+            BaldiTimeActions.PlaySpoopMusic();
+
+            timer = 0f;
+            while (timer < 0.5f)
+            {
+                if (coreGameManager == null)
+                {
+                    yield break;
+                }
+                Flash.color = new Color(0f, 0f, 0f, 1f - timer * 2f);
+                timer += Time.unscaledDeltaTime;
+                yield return null;
+            }
+
+            Object.Destroy(Flash_Obj);
+            Object.Destroy(TitleCardCanvas.gameObject);
+
+            yield break;
+        }
+
+        public static IEnumerator Rank(CoreGameManager coreGameManager, BaseGameManager baseGameManager)
+        {
+            BaseGameManagerPatches.musPlayer.Stop();
+            Singleton<MusicManager>.Instance.StopMidi();
+            coreGameManager.GetCamera(0).SetControllable(false);
+            coreGameManager.GetPlayer(0).plm.Entity.SetFrozen(true);
+            coreGameManager.disablePause = true;
+            baseGameManager.Ec.PauseEnvironment(true);
+            AudioManager audMan = coreGameManager.audMan;
+            AudioManager musicMan = coreGameManager.musicMan;
+
+            Canvas RankCanvas = UIHelpers.CreateBlankUIScreen("Rank", true, true);
+
+            GameObject Background_Obj = new GameObject("Background");
+            Background_Obj.transform.SetParent(RankCanvas.transform, false);
+            RawImage Background = Background_Obj.AddComponent<RawImage>();
+            Background.color = new Color(1f, 1f, 1f, 0f);
+            Background.rectTransform.anchoredPosition3D = Vector3.zero;
+            Background.rectTransform.anchorMin = new Vector2(0f, 0f);
+            Background.rectTransform.anchorMax = new Vector2(1f, 1f);
+
+            float timer = 0f;
+            while (timer < 0.5f)
+            {
+                if (coreGameManager == null)
+                {
+                    yield break;
+                }
+                Background.color = new Color(1f, 1f, 1f, timer * 2f);
+                timer += Time.unscaledDeltaTime;
+                yield return null;
+            }
+            Background.color = new Color(1f, 1f, 1f, 1f);
+
+            GameObject Student_Obj = new GameObject("Student");
+            Student_Obj.transform.SetParent(RankCanvas.transform, false);
+            Image Student0 = Student_Obj.AddComponent<Image>();
+            Student0.rectTransform.anchoredPosition3D = Vector3.zero;
+            Student0.rectTransform.localScale = Vector3.one;
+            Student0.rectTransform.sizeDelta = new Vector2(16f, 16f);
+            Student0.rectTransform.anchorMin = new Vector2(0f, 0f);
+            Student0.rectTransform.anchorMax = new Vector2(1f, 1f);
+            Student0.color = new Color(1f, 1f, 1f, 0f);
+            Student0.sprite = BasePlugin.AssetMan.Get<Sprite>("RankAnime_Student_0");
+
+            musicMan.PlaySingle(BasePlugin.AssetMan.Get<SoundObject>("Rank_" + BaldiTimeActions.ranks[BaldiTimeUI.numOld]));
+
+
+            if (BaldiTimeActions.pizzaTimer <= 0f)
+            {
+                GameObject BaldiFace_Obj = new GameObject("BaldiFace");
+                BaldiFace_Obj.transform.SetParent(RankCanvas.transform, false);
+                Image BaldiFace = BaldiFace_Obj.AddComponent<Image>();
+                BaldiFace.rectTransform.anchoredPosition3D = Vector3.zero;
+                BaldiFace.rectTransform.localScale = Vector3.one;
+                BaldiFace.rectTransform.sizeDelta = new Vector2(16f, 16f);
+                BaldiFace.rectTransform.anchorMax = new Vector2(1f, 1f);
+                BaldiFace.rectTransform.anchorMin = new Vector2(0f, 0f);
+                BaldiFace.sprite = BasePlugin.AssetMan.Get<Sprite>("RankAnime_BaldiFace");
+
+                IEnumerator enumerator(Image image)
+                {
+                    audMan.PlaySingle(BasePlugin.AssetMan.Get<SoundObject>("Explosion"));
+                    float t = 0f;
+                    while (t < 1f)
+                    {
+                        float edit = t * 10f;
+                        image.rectTransform.anchoredPosition = new Vector2(UnityEngine.Random.Range(-edit, edit), UnityEngine.Random.Range(-edit, edit));
+                        t += Time.unscaledDeltaTime;
+                        yield return null;
+                    }
+                    image.rectTransform.anchoredPosition = Vector2.one;
+
+                    yield return new WaitForSecondsRealtime(0.5f);
+
+                    t = 0f;
+                    while (t < 1f)
+                    {
+                        image.rectTransform.anchorMax = new Vector2(1f, 1f);
+                        image.rectTransform.anchorMin = new Vector2(0f, 0f);
+                        image.rectTransform.anchorMax += new Vector2(0f, -1f) * t;
+                        image.rectTransform.anchorMin += new Vector2(0f, -1f) * t;
+                        t += Time.unscaledDeltaTime;
+                        yield return null;
+                    }
+                    Object.Destroy(image.gameObject);
+
+                    yield break;
+                }
+
+                BaldiFace.StartCoroutine(enumerator(BaldiFace));
+            }
+
+
+            timer = 0f;
+            while (timer < 0.5f)
+            {
+                if (coreGameManager == null)
+                {
+                    yield break;
+                }
+                Student0.color = new Color(1f, 1f, 1f, timer * 2f);
+                timer += Time.unscaledDeltaTime;
+                yield return null;
+            }
+            Student0.color = new Color(1f, 1f, 1f, 1f);
+
+            yield return new WaitForSecondsRealtime(3f);
+
+            timer = 0f;
+            while (timer < 0.25f)
+            {
+                if (coreGameManager == null)
+                {
+                    yield break;
+                }
+                for (int i = 4; i >= 0; i--)
+                {
+                    if (timer > 0.05f * i)
+                    {
+                        Student0.sprite = BasePlugin.AssetMan.Get<Sprite>("RankAnime_Student_" + (i + 1).ToString());
+                        break;
+                    }
+                }
+                timer += Time.unscaledDeltaTime;
+                yield return null;
+            }
+
+            Student0.sprite = BasePlugin.AssetMan.Get<Sprite>("RankAnime_Student_" + BaldiTimeActions.ranks[BaldiTimeUI.numOld]);
+
+            GameObject Rank_Obj = new GameObject("Rank");
+            Rank_Obj.transform.SetParent(RankCanvas.transform, false);
+            Image Rank = Rank_Obj.AddComponent<Image>();
+            Rank.rectTransform.anchoredPosition3D = Vector3.zero;
+            Rank.rectTransform.localScale = Vector3.one;
+            Rank.rectTransform.sizeDelta = new Vector2(16f, 16f);
+            Rank.rectTransform.anchorMin = new Vector2(0f, 0f);
+            Rank.rectTransform.anchorMax = new Vector2(1f, 1f);
+            Rank.color = new Color(1f, 1f, 1f, 1f);
+            Rank.sprite = BasePlugin.AssetMan.Get<Sprite>("RankAnime_Rank_" + BaldiTimeActions.ranks[BaldiTimeUI.numOld]);
+            Student0.transform.SetAsLastSibling();
+
+            yield return new WaitForSecondsRealtime(5.5f);
+
+            Rank.color = new Color(1f, 0.5f, 0f, 1f);
+            Student0.color = new Color(1f, 0.5f, 0f, 1f);
+            Background.color = new Color(1f, 0.5f, 0f, 1f);
+
+            yield return new WaitForSecondsRealtime(7.5f);
+
+            GameObject Flash_Obj = new GameObject("Flash");
+            Flash_Obj.transform.SetParent(RankCanvas.transform, false);
+            RawImage Flash = Flash_Obj.AddComponent<RawImage>();
+            Flash.color = new Color(0f, 0f, 0f, 0f);
+            Flash.rectTransform.anchoredPosition3D = Vector3.zero;
+            Flash.rectTransform.anchorMin = new Vector2(0f, 0f);
+            Flash.rectTransform.anchorMax = new Vector2(1f, 1f);
+
+            timer = 0f;
+            while (timer < 1f)
+            {
+                if (coreGameManager == null)
+                {
+                    yield break;
+                }
+                Flash.color = new Color(0f, 0f, 0f, timer);
+                timer += Time.unscaledDeltaTime;
+                yield return null;
+            }
+            Flash.color = new Color(0f, 0f, 0f, 1f);
+
+            Object.Destroy(Student_Obj);
+            Object.Destroy(Background_Obj);
+            Object.Destroy(Rank_Obj);
+
+            baseGameManager.LoadNextLevel();
+
+            timer = 0f;
+            while (timer < 1f)
+            {
+                Flash.color = new Color(0f, 0f, 0f, 1f - timer);
+                timer += Time.unscaledDeltaTime;
+                yield return null;
+            }
+            Flash.color = new Color(0f, 0f, 0f, 0f);
+
+            Object.Destroy(RankCanvas.gameObject);
 
             yield break;
         }

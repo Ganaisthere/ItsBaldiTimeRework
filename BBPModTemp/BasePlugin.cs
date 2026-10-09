@@ -18,7 +18,7 @@ using static BepInEx.BepInDependency;
 
 namespace ItsBaldiTimeRework
 {
-    [BepInPlugin("ganaisthere.plus.itsbalditimerework", "Its Baldi Time Reworked", "0.2.1.0")]
+    [BepInPlugin("ganaisthere.plus.itsbalditimerework", "Its Baldi Time Reworked", "0.2.2.0")]
     [BepInDependency("mtm101.rulerp.bbplus.baldidevapi")]
     [BepInDependency("Nil.Library")]
     [BepInDependency("pixelguy.pixelmodding.baldiplus.custommainmenusapi", DependencyFlags.SoftDependency)]
@@ -31,6 +31,7 @@ namespace ItsBaldiTimeRework
         public static BasePlugin Instance { get; private set; }
         public static AssetManager AssetMan = new AssetManager();
         public static List<WeightedRoomAsset> classWeightedRoomAsset = new List<WeightedRoomAsset>();
+        public static Harmony harmony = new Harmony("ganaisthere.plus.itsbalditimerework");
 
         //Copyright (c) 2023 benjaminpants
         //Licensed under the MIT License(MIT)
@@ -72,6 +73,10 @@ namespace ItsBaldiTimeRework
         public ConfigEntry<bool> ConfigUniqueGenerator;
         public ConfigEntry<bool> ConfigShowToppins;
         public ConfigEntry<bool> ConfigOpeningAnimations;
+        public ConfigEntry<int> ConfigMusicVolume;
+        public ConfigEntry<CameraShakeStyle> ConfigCameraShakeStyle;
+        public ConfigEntry<float> ConfigCameraShakeSpeed;
+        public ConfigEntry<float> ConfigCameraShakeIntensity;
         //---------------------------------------------------------------------
         //public TextMeshProUGUI PackListText;
         //public TextMeshProUGUI PackDescriptionText;
@@ -83,7 +88,6 @@ namespace ItsBaldiTimeRework
         //----------------------------------------------------------------------
         public static bool IsRaldiTweaksInstalled = false;
         public static bool IsNullscapeinBBInstalled = false;
-        public bool optionsMenuBuilt = false;
         //----------------------------------------------------------------------
         public void Update()
         {
@@ -92,47 +96,68 @@ namespace ItsBaldiTimeRework
 
             //-----------------------------------------------------------------
 
-            if (optionsMenuBuilt)
-            {
-                /*configPackIndex.Value = PackIndex;
-                if (PackIndex >= PackList.Count)
-                {
-                    PackIndex = 0;
-                }
-                if (PackList.Count > 0)
-                {
-                    //PackListText.text = RPLoader.packMetas[PackIndex].name;
-                    //PackDescriptionText.text = RPLoader.packMetas[PackIndex].description;
-                    //PackAuthorText.text = RPLoader.packMetas[PackIndex].author;
-                }*/
-            }
+
         }
         //---------------------------------------------------------------------
         public void Awake()
         {
-            ConfigUniqueGenerator = Config.Bind
-            (
-                "General",
-                "Unique Generator - WIP",
-                false,
-                "If true, the mod's unique modification of the generator will be enabled: each floor has the floor 2 layout of the vanilla game, and the floor type is not limited by the number of floors. Also, The classroom activity will be selected from all activities."
-            );
-            ConfigShowToppins = Config.Bind
-            (
-                "General",
-                "Show Toppins",
-                false,
-                "If true, when you get a toppin, he/she will follow you as an ENTITY instead of hiding."
-            );
             ConfigOpeningAnimations = Config.Bind
             (
                 "General",
                 "Opening Animations",
                 true,
-                "If true, If true, the mod will show an opening animation before the game's warning screen."
+                "If true, the mod will show an opening animation before the game's warning screen."
             );
+            ConfigMusicVolume = Config.Bind
+            (
+                "General",
+                "Music Volume",
+                10,
+                "The volume of the music in this mod. (Max 10, Min 0)"
+            );
+            ConfigCameraShakeStyle = Config.Bind
+            (
+                "Camera",
+                "Camera Shake Style",
+                CameraShakeStyle.Beat,
+                @"The camera shake style after you begining baldi time.
+Disabled - Disabled camera shake;
+Smooth - The camera will shake smoothly left and right;
+Beat - The camera will sway rhythmically from side to side."
+            );
+            ConfigCameraShakeSpeed = Config.Bind
+            (
+                "Camera",
+                "Camera Shake Speed",
+                0.666f,
+                "The camera shake speed after you begining baldi time."
+            );
+            ConfigCameraShakeIntensity = Config.Bind
+            (
+                "Camera",
+                "Camera Shake Intensity",
+                4f,
+                "The camera shake intensity after you begining baldi time."
+            );
+            ConfigUniqueGenerator = Config.Bind
+            (
+                "Gameplay",
+                "Unique Generator - WIP",
+                false,
+                @"If true, the mod's unique modification of the generator will be enabled:
+Each floor has the floor 2 layout of the vanilla game (Expect Floor 5);
+Floor type will not limited by the number of floors;
+The classroom activity will be selected from all activities."
+            );
+            ConfigShowToppins = Config.Bind
+            (
+                "Gameplay",
+                "Show Toppins",
+                false,
+                "If true, when you get a toppin, he/she will follow you as an ENTITY instead of hiding."
+            );
+
             Instance = this;
-            Harmony harmony = new Harmony("ganaisthere.plus.itsbalditimerework");
             harmony.PatchAllConditionals();
             ModdedSaveGame.AddSaveHandler(base.Info);
             LoadingEvents.RegisterOnAssetsLoaded(base.Info, this.LoadAssets(), LoadingEventOrder.Start);
@@ -152,13 +177,13 @@ namespace ItsBaldiTimeRework
             AddEnglishLocalization("Subtitles_English.json", ".Core");
             LoadResources(harmony);
 
-            //PackIndex = PackOptionsIndex;
             CustomOptionsCore.OnMenuInitialize += OnMen;
         }
 
         private void OnMen(OptionsMenu __instance, CustomOptionsHandler handler)
         {
-            handler.AddCategory<PackOptions>("BaldiTimeRE\n- Packs -");
+            handler.AddCategory<Options_General>("BaldiTimeRE\n- General -");
+            handler.AddCategory<Options_Packs>("BaldiTimeRE\n- Packs -");
         }
 
         public void LoadResources(Harmony harmony = null)
@@ -279,6 +304,7 @@ namespace ItsBaldiTimeRework
             // Textures/Entity
             AddTexture2D("BaldiFace.png", "Textures/Entity", new Vector2(0.5f, 0.4f), 8f);
             AddTexture2D("BaldiFace_Scraed.png", "Textures/Entity", new Vector2(0.5f, 0.4f), 8f);
+            AddTexture2D("BaldiFace_Defeated.png", "Textures/Entity", new Vector2(0.5f, 0.4f), 8f);
             AddTexture2D("LapPortal_0.png", "Textures/Entity", true, 16f);
             AddTexture2D("LapPortal_1.png", "Textures/Entity", true, 16f);
             AddTexture2D("Toppins_0_Idle.png", "Textures/Entity", new Vector2(0.5f, 0.6f));
@@ -329,6 +355,11 @@ namespace ItsBaldiTimeRework
             AddOpeningStuffs();
             // Textures/Misc/RankAnime
             AddTexture2D("RankAnime_Student_0.png", "Textures/Misc/RankAnime", true);
+            AddTexture2D("RankAnime_Student_1.png", "Textures/Misc/RankAnime", true);
+            AddTexture2D("RankAnime_Student_2.png", "Textures/Misc/RankAnime", true);
+            AddTexture2D("RankAnime_Student_3.png", "Textures/Misc/RankAnime", true);
+            AddTexture2D("RankAnime_Student_4.png", "Textures/Misc/RankAnime", true);
+            AddTexture2D("RankAnime_Student_5.png", "Textures/Misc/RankAnime", true);
             AddTexture2D("RankAnime_Student_D.png", "Textures/Misc/RankAnime", true);
             AddTexture2D("RankAnime_Student_C.png", "Textures/Misc/RankAnime", true);
             AddTexture2D("RankAnime_Student_B.png", "Textures/Misc/RankAnime", true);
@@ -341,6 +372,7 @@ namespace ItsBaldiTimeRework
             AddTexture2D("RankAnime_Rank_A.png", "Textures/Misc/RankAnime", true);
             AddTexture2D("RankAnime_Rank_S.png", "Textures/Misc/RankAnime", true);
             AddTexture2D("RankAnime_Rank_P.png", "Textures/Misc/RankAnime", true);
+            AddTexture2D("RankAnime_BaldiFace.png", "Textures/Misc/RankAnime", true);
             // Textures/Misc/TitleCard
             AddTitleCardStuffs();
 
@@ -500,6 +532,8 @@ namespace ItsBaldiTimeRework
                             string fileName = Path.GetFileName(file);
                             if (!fileName.Contains("-Title.png"))
                             {
+                                Log(fileName);
+
                                 BaldiTimeAnimations.TitleCardBackSprites.Add(AssetLoader.SpriteFromFile(Path.Combine(packPath, fileName), new Vector2(0.5f, 0.5f)));
 
                                 BaldiTimeAnimations.TitleCardTitleSprites.Add(AssetLoader.SpriteFromFile(Path.Combine(packPath, fileNameWithoutExtension + "-Title.png"), new Vector2(0.5f, 0.5f)));
@@ -679,7 +713,7 @@ namespace ItsBaldiTimeRework
                 string pack = LoadedPacks[i];
                 string packPath = Path.Combine(AssetLoader.GetModPath(this), "ResourcePacks", pack, chlidPath);
                 if (Directory.Exists(packPath))
-                { 
+                {
                     string[] getfiles = Directory.GetFiles(packPath, "*.ogg", SearchOption.TopDirectoryOnly);
                     if (getfiles.Length > 0)
                     {
@@ -916,7 +950,7 @@ namespace ItsBaldiTimeRework
         }
         internal void AddEnglishLocalization(string fileNameWithExtension, string chlidPath)
         {
-            string path = Path.Combine(AssetLoader.GetModPath(this) , chlidPath);
+            string path = Path.Combine(AssetLoader.GetModPath(this), chlidPath);
             if (!Directory.Exists(path))
             {
                 Debug.LogError("Directory not found: " + path);
@@ -947,5 +981,28 @@ namespace ItsBaldiTimeRework
                 Logger.LogInfo(data);
             }
         }
+
+        internal static void LogStatic(object data, int level = 0)
+        {
+            if (level == 1)
+            {
+                Instance.Logger.LogWarning(data);
+            }
+            else if (level == 2)
+            {
+                Instance.Logger.LogError(data);
+            }
+            else
+            {
+                Instance.Logger.LogInfo(data);
+            }
+        }
+    }
+
+    public enum CameraShakeStyle
+    {
+        Disabled,
+        Smooth,
+        Beat
     }
 }

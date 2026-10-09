@@ -15,8 +15,6 @@ namespace ItsBaldiTimeRework
             if (DefaultDeathSounds.Count <= 0)
             {
                 SoundObject soundObject = AssetFinder.FindOfTypeWithName<SoundObject>("Lose_Buzz", true);
-                soundObject.color = Color.white;
-
                 DefaultDeathSounds.Add(new WeightedSoundObject { selection = soundObject, weight = 100 });
 
                 soundObject = AssetFinder.FindOfTypeWithName<SoundObject>("Lose_Corruption", true);
@@ -39,6 +37,11 @@ namespace ItsBaldiTimeRework
             }
 
             UsefulHelpers.KillPlayer(npc, DefaultDeathSounds.ToArray());
+        }
+
+        public static string GLT(string key)
+        {
+            return Singleton<LocalizationManager>.Instance.GetLocalizedText(key);
         }
     }
 }

@@ -1,8 +1,5 @@
 ﻿using UnityEngine;
-using NilLib;
-using MTM101BaldAPI.AssetTools;
 using System.Collections;
-using AlmostEngine;
 
 namespace ItsBaldiTimeRework
 {
@@ -13,7 +10,7 @@ namespace ItsBaldiTimeRework
             base.Initialize();
             spriteRenderer[0].sprite = BasePlugin.AssetMan.Get<Sprite>("BaldiFace");
             spriteRenderer[0].transform.gameObject.layer = LayerMask.NameToLayer("Overlay");
-            behaviorStateMachine.ChangeState(new BaldiFace_Wait(this, false));
+            behaviorStateMachine.ChangeState(new BaldiFace_Wait(this, false, true));
         }
     }
 
@@ -63,10 +60,12 @@ namespace ItsBaldiTimeRework
 
     public class BaldiFace_Wait : BaldiFace_StateBase
     {
-        public BaldiFace_Wait(BaldiFace me, bool lethal = false) : base(me)
+        bool sound = true;
+        public BaldiFace_Wait(BaldiFace me, bool lethal = false, bool playSound = false) : base(me)
         {
             baldiFace = me;
             isLethal = lethal;
+            sound = playSound;
         }
 
         public override void Enter()
@@ -84,7 +83,10 @@ namespace ItsBaldiTimeRework
                 yield break;
             }
 
-            Singleton<CoreGameManager>.Instance.audMan.PlaySingle(BasePlugin.AssetMan.Get<SoundObject>("BaldiFaceLaugh"));
+            if (sound)
+            {
+                Singleton<CoreGameManager>.Instance.audMan.PlaySingle(BasePlugin.AssetMan.Get<SoundObject>("BaldiFaceLaugh"));
+            }
             npc.Entity.Teleport(Singleton<CoreGameManager>.Instance.GetPlayer(0).transform.position);
 
             float timer = 0f;

@@ -1,7 +1,5 @@
 ﻿using HarmonyLib;
 using MTM101BaldAPI.Reflection;
-using System.Collections;
-using System.Collections.Generic;
 using Unity.Mathematics;
 using UnityEngine;
 
@@ -65,6 +63,7 @@ namespace ItsBaldiTimeRework
                 return;
             }
             BaldiTimeUI.SetupGUI(__instance);
+            BaldiTimeUI.camTimer = 0f;
         }
 
         [HarmonyPatch("Update")]
@@ -129,6 +128,22 @@ namespace ItsBaldiTimeRework
             BaldiTimeActions.Reset();
         }
 
+        [HarmonyPatch("FinishLevel")]
+        [HarmonyPrefix]
+        public static bool FinishLevelPrefix(BaseGameManager __instance)
+        {
+            if (!__instance.InPitstop() && __instance.managerNameKey == "Mode_HideSeek")
+            {
+                BaldiTimeActions.SpoopMusicsRandom = -1;
+                BaldiTimeAnimations.TitleCardRandom = -1;
+                __instance.Ec.PauseEnvironment(true);
+                __instance.Ec.PauseEvents(true);
+                __instance.StartCoroutine(BaldiTimeAnimations.Rank(Singleton<CoreGameManager>.Instance, __instance));
+                return false;
+            }
+            return true;
+        }
+
         [HarmonyPatch("CollectNotebooks")]
         [HarmonyPrefix]
         public static void CollectNotebooksPrefix(int count)
@@ -148,13 +163,6 @@ namespace ItsBaldiTimeRework
             {
                 BaldiTimeActions.points += 225f;
                 BaldiTimeActions.AddCombo(0f);
-                /*foreach (NPC npc in __instance.Ec.Npcs)
-                {
-                    if ()
-                    {
-                    
-                    }
-                }*/
             }
         }
 
@@ -221,6 +229,19 @@ namespace ItsBaldiTimeRework
                     BaldiTimeUI.RankOverlay.rectTransform.anchoredPosition = new Vector2(0f, 48f);
                 }
             }
+            BaldiTimeActions.itsBaldiTime = false;
+        }
+
+        [HarmonyPatch("StartGame")]
+        [HarmonyPostfix]
+        public static void StartGamePostfix()
+        {
+            BaseGameManager baseGameManager = Singleton<BaseGameManager>.Instance;
+            BasePlugin.LogStatic(baseGameManager.managerNameKey);
+            if (!baseGameManager.InPitstop() && baseGameManager.managerNameKey == "Mode_HideSeek")
+            {
+                baseGameManager.StartCoroutine(BaldiTimeAnimations.TitleCard(Singleton<CoreGameManager>.Instance, baseGameManager));
+            }
         }
 
         [HarmonyPatch("Start")]
@@ -230,7 +251,10 @@ namespace ItsBaldiTimeRework
             MainGameManagerPatches.happyBaldi = null;
             if (BaseGameManagerPatches.musPlayer != null)
             {
-                BaseGameManagerPatches.musPlayer.Stop();
+                if (BaseGameManagerPatches.musPlayer.audioSource1 != null)
+                {
+                    BaseGameManagerPatches.musPlayer.Stop();
+                }
             }
             if (BaldiTimeUI.PointDisplay != null)
             {
@@ -242,30 +266,6 @@ namespace ItsBaldiTimeRework
         [HarmonyPostfix]
         public static void StartPostfix(ElevatorScreen __instance)
         {
-            if (death)
-            {
-                return;
-            }
-            List<IEnumerator> queuedEnumerators = __instance.ReflectionGetVariable("queuedEnumerators") as List<IEnumerator>;
-            AudioManager audMan = __instance.ReflectionGetVariable("audMan") as AudioManager;
-            //Debug.LogWarning("queuedEnumerators.Count = " + queuedEnumerators.Count);
-            if (queuedEnumerators.Count == 2 && BaldiTimeAnimations.TitleCardBackSprites.Count > 0)
-            {
-                //__instance.StopCoroutine("ZoomIntro");
-                //__instance.StopCoroutine("Shut");
-                Singleton<MusicManager>.Instance.StopMidi();
-                //queuedEnumerators.Clear();
-                //CursorInitiator cursorInitiator = __instance.ReflectionGetVariable("cursorInitiator") as CursorInitiator;
-                //cursorInitiator.enabled = true;
-                //__instance.transform.localScale = Vector3.one;
-                //__instance.ReflectionSetVariable("busy", true);
-                BaldiTimeAnimations.TitleCardAnimationsButVoid(__instance.Canvas, audMan, __instance);
-            }
-            else if (queuedEnumerators.Count == 3)
-            {
-                Singleton<MusicManager>.Instance.StopMidi();
-                BaldiTimeAnimations.RankAnimationsButVoid(audMan, __instance);
-            }
             death = true;
         }
     }
@@ -397,6 +397,23 @@ namespace ItsBaldiTimeRework
         public static void Postfix()
         {
             ElevatorScreenPatches.death = false;
+            BaldiTimeAnimations.TitleCardRandom = -1;
+            BaldiTimeActions.SpoopMusicsRandom = -1;
+        }
+    }
+
+    [HarmonyPatch(typeof(GameCamera))]
+    public class GameCameraPatches
+    {
+        [HarmonyPatch("LateUpdate")]
+        [HarmonyPostfix]
+        public static void LateUpdatePostfix(GameCamera __instance)
+        {
+            if (__instance == null)
+            {
+                return;
+            }
+            BaldiTimeUI.UpdateCam(__instance);
         }
     }
 

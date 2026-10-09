@@ -1,5 +1,6 @@
 ﻿using MTM101BaldAPI.Reflection;
 using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace ItsBaldiTimeRework
@@ -9,40 +10,71 @@ namespace ItsBaldiTimeRework
         public AudioSource audioSource1;
         public AudioSource audioSource2;
         public int idk = 1;
+        public float VolumeMax => BasePlugin.Instance.ConfigMusicVolume.Value / 10f;
+        public List<IEnumerator> enumerators = new List<IEnumerator>();
+        public bool isFadeing = false;
 
         public void Initialize()
         {
             idk = 1;
+            isFadeing = false;
             audioSource1.playOnAwake = false;
             audioSource1.spatialBlend = 0f;
             audioSource1.ignoreListenerPause = false;
-            audioSource1.volume = 1f;
+            audioSource1.volume = 1f * VolumeMax;
             audioSource1.ignoreListenerVolume = false;
             audioSource2.playOnAwake = false;
             audioSource2.spatialBlend = 0f;
             audioSource2.ignoreListenerPause = false;
-            audioSource2.volume = 1f;
+            audioSource2.volume = 1f * VolumeMax;
             audioSource2.ignoreListenerVolume = false;
+            enumerators.Clear();
         }
+
+        public void Update()
+        {
+            if (!isFadeing)
+            {
+                audioSource1.volume = 1f * VolumeMax;
+                audioSource2.volume = 1f * VolumeMax;
+            }
+        }
+
+        public void StopAllCoroutinesIguess()
+        {
+            if (enumerators.Count <= 0) return;
+            while (enumerators.Count > 0)
+            {
+                StopCoroutine(enumerators[0]);
+                enumerators.RemoveAt(0);
+            }
+        }
+
+        public void StartCoroutineIguess(IEnumerator enumerator)
+        {
+            enumerators.Add(enumerator);
+            StartCoroutine(enumerator);
+        }
+
         public void Play(AudioClip audioClip, bool isLoop = false, bool fade = false)
         {
             if (audioClip != null)
             {
                 if (fade)
                 {
-                    StopAllCoroutines();
+                    StopAllCoroutinesIguess();
                     if (idk == 1)
                     {
                         idk = 2;
-                        StartCoroutine(FadeIn(audioSource2));
-                        StartCoroutine(FadeOut(audioSource1));
+                        StartCoroutineIguess(FadeIn(audioSource2));
+                        StartCoroutineIguess(FadeOut(audioSource1));
                         PlayAudioClip(audioClip, isLoop, audioSource2);
                     }
                     else
                     {
                         idk = 1;
-                        StartCoroutine(FadeIn(audioSource1));
-                        StartCoroutine(FadeOut(audioSource2));
+                        StartCoroutineIguess(FadeIn(audioSource1));
+                        StartCoroutineIguess(FadeOut(audioSource2));
                         PlayAudioClip(audioClip, isLoop, audioSource1);
                     }
                 }
@@ -50,8 +82,8 @@ namespace ItsBaldiTimeRework
                 {
                     idk = 1;
                     Stop();
-                    audioSource1.volume = 1f;
-                    audioSource2.volume = 1f;
+                    audioSource1.volume = 1f * VolumeMax;
+                    audioSource2.volume = 1f * VolumeMax;
                     PlayAudioClip(audioClip, isLoop, audioSource1);
                 }
             }
@@ -65,31 +97,31 @@ namespace ItsBaldiTimeRework
                     if (idk == 1)
                     {
                         idk = 2;
-                        StartCoroutine(FadeIn(audioSource2));
-                        StartCoroutine(FadeOut(audioSource1));
-                        StartCoroutine(QueueAction(audioClip1, audioClip2, audioSource2));
+                        StartCoroutineIguess(FadeIn(audioSource2));
+                        StartCoroutineIguess(FadeOut(audioSource1));
+                        StartCoroutineIguess(QueueAction(audioClip1, audioClip2, audioSource2));
                     }
                     else
                     {
                         idk = 1;
-                        StartCoroutine(FadeIn(audioSource1));
-                        StartCoroutine(FadeOut(audioSource2));
-                        StartCoroutine(QueueAction(audioClip1, audioClip2, audioSource1));
+                        StartCoroutineIguess(FadeIn(audioSource1));
+                        StartCoroutineIguess(FadeOut(audioSource2));
+                        StartCoroutineIguess(QueueAction(audioClip1, audioClip2, audioSource1));
                     }
                 }
                 else
                 {
                     idk = 1;
                     Stop();
-                    audioSource1.volume = 1f;
-                    audioSource2.volume = 1f;
-                    StartCoroutine(QueueAction(audioClip1, audioClip2, audioSource1));
+                    audioSource1.volume = 1f * VolumeMax;
+                    audioSource2.volume = 1f * VolumeMax;
+                    StartCoroutineIguess(QueueAction(audioClip1, audioClip2, audioSource1));
                 }
             }
         }
         public void Stop(bool instant = true)
         {
-            StopAllCoroutines();
+            StopAllCoroutinesIguess();
             if (instant)
             {
                 audioSource1.Stop();
@@ -97,8 +129,8 @@ namespace ItsBaldiTimeRework
             }
             else
             {
-                StartCoroutine(FadeOut(audioSource1));
-                StartCoroutine(FadeOut(audioSource2));
+                StartCoroutineIguess(FadeOut(audioSource1));
+                StartCoroutineIguess(FadeOut(audioSource2));
             }
         }
         public IEnumerator Meatophobia(Notebook notebook)
@@ -120,6 +152,8 @@ namespace ItsBaldiTimeRework
                 audioSource2.Play();
                 while (!BaldiTimeActions.itsBaldiTime)
                 {
+                    isFadeing = true;
+
                     if (notebook == null || player == null)
                     {
                         yield break;
@@ -127,18 +161,18 @@ namespace ItsBaldiTimeRework
                     float dist = Vector3.Distance(notebook.transform.position, player.transform.position);
                     if (dist <= 20f)
                     {
-                        audioSource2.volume = 1f;
+                        audioSource2.volume = 1f * VolumeMax;
                         audioSource1.volume = 0f;
                     }
                     else if (dist <= 50f)
                     {
-                        audioSource2.volume = 1f - (dist - 20f) / 30f;
-                        audioSource1.volume = (dist - 20f) / 30f;
+                        audioSource2.volume = (1f - (dist - 20f) / 30f) * VolumeMax;
+                        audioSource1.volume = ((dist - 20f) / 30f) * VolumeMax;
                     }
                     else
                     {
                         audioSource2.volume = 0f;
-                        audioSource1.volume = 1f;
+                        audioSource1.volume = 1f * VolumeMax;
                     }
                     yield return null;
                 }
@@ -151,6 +185,8 @@ namespace ItsBaldiTimeRework
                 audioSource1.Play();
                 while (!BaldiTimeActions.itsBaldiTime)
                 {
+                    isFadeing = true;
+
                     if (notebook == null || player == null)
                     {
                         yield break;
@@ -158,22 +194,24 @@ namespace ItsBaldiTimeRework
                     float dist = Vector3.Distance(notebook.transform.position, player.transform.position);
                     if (dist <= 20f)
                     {
-                        audioSource1.volume = 1f;
+                        audioSource1.volume = 1f * VolumeMax;
                         audioSource2.volume = 0f;
                     }
                     else if (dist <= 50f)
                     {
-                        audioSource1.volume = 1f - (dist - 20f) / 30f;
-                        audioSource2.volume = (dist - 20f) / 30f;
+                        audioSource1.volume = (1f - (dist - 20f) / 30f) * VolumeMax;
+                        audioSource2.volume = ((dist - 20f) / 30f) * VolumeMax;
                     }
                     else
                     {
                         audioSource1.volume = 0f;
-                        audioSource2.volume = 1f;
+                        audioSource2.volume = 1f * VolumeMax;
                     }
                     yield return null;
                 }
             }
+
+            isFadeing = false;
             yield break;
         }
         private void PlayAudioClip(AudioClip audioClip, bool isLoop, AudioSource audioSource)
@@ -191,25 +229,33 @@ namespace ItsBaldiTimeRework
             audioSource.volume = 0f;
             while (timer < 1f)
             {
-                audioSource.volume = timer;
+                isFadeing = true;
+
+                audioSource.volume = timer * VolumeMax;
                 timer += Time.deltaTime;
                 yield return null;
             }
-            audioSource.volume = 1f;
+            audioSource.volume = 1f * VolumeMax;
+
+            isFadeing = false;
             yield break;
         }
         private IEnumerator FadeOut(AudioSource audioSource)
         {
             float timer = 1f;
-            audioSource.volume = 1f;
+            audioSource.volume = 1f * VolumeMax;
             while (timer > 0f)
             {
-                audioSource.volume = timer;
+                isFadeing = true;
+
+                audioSource.volume = timer * VolumeMax;
                 timer -= Time.deltaTime;
                 yield return null;
             }
             audioSource.Stop();
-            audioSource.volume = 1f;
+            audioSource.volume = 1f * VolumeMax;
+
+            isFadeing = false;
             yield break;
         }
         private IEnumerator QueueAction(AudioClip audioClip1, AudioClip audioClip2, AudioSource audioSource)

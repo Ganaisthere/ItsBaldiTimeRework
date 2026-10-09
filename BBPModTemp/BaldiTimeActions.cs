@@ -14,6 +14,7 @@ namespace ItsBaldiTimeRework
         public static float pizzaTimerTotal = 0f;
         public static bool itsBaldiTime = false;
         public static List<AudioClip> AllSpoopMusics = new List<AudioClip>();
+        public static int SpoopMusicsRandom = -1;
         public static List<NPC> toppins = new List<NPC>();
         public static float points = 0f;
         public static float comboPoints = 0f;
@@ -28,6 +29,41 @@ namespace ItsBaldiTimeRework
         public static int notebookmax = 4;
         public static float staminaOld = 100f;
 
+        public static void PlaySpoopMusic()
+        {
+            if (!BasePlugin.IsNullscapeinBBInstalled)
+            {
+                List<AudioClip> chaseMusics = new List<AudioClip>();
+                if (AllSpoopMusics.Count > 0)
+                {
+                    foreach (AudioClip music in AllSpoopMusics)
+                    {
+                        string levelTitle = Singleton<CoreGameManager>.Instance.sceneObject.levelTitle;
+                        chaseMusics.Add(music);
+
+                        /*bool StartWithF = levelTitle.StartsWith("F");
+                        if (music.name.Contains("_" + Singleton<CoreGameManager>.Instance.sceneObject.levelTitle) || !StartWithF)
+                        {
+                            chaseMusics.Add(music);
+                        }
+                        if (!music.name.Contains("_F1") && !music.name.Contains("_F2") && !music.name.Contains("_F3") && !music.name.Contains("_F4") && !music.name.Contains("_F5"))
+                        {
+                            chaseMusics.Add(music);
+                        }*/
+                    }
+                }
+                if (chaseMusics.Count > 0)
+                {
+                    if (SpoopMusicsRandom == -1)
+                    {
+                        SpoopMusicsRandom = Random.Range(0, chaseMusics.Count - 1);
+                    }
+                    AudioClip choosedMusic = chaseMusics[SpoopMusicsRandom];
+                    BaseGameManagerPatches.musPlayer.Stop();
+                    BaseGameManagerPatches.musPlayer.Play(choosedMusic, true);
+                }
+            }
+        }
         public static void AddCombo(float comboAdd, float time = 1225f)
         {
             combo += comboAdd;
@@ -58,6 +94,7 @@ namespace ItsBaldiTimeRework
         }
         public static IEnumerator ComboMechanism(BaseGameManager baseGameManager)
         {
+            BasePlugin.LogStatic("ComboMechanism Started.");
             comboKeep = true;
             bool idk = false;
             bool idktoo = false;
@@ -109,6 +146,7 @@ namespace ItsBaldiTimeRework
                 }
                 yield return null;
             }
+            BasePlugin.LogStatic("ComboMechanism Ended.");
             yield break;
         }
         public static void Setup(BaseGameManager baseGameManager)
@@ -117,6 +155,7 @@ namespace ItsBaldiTimeRework
             notebookmax = baseGameManager.Ec.notebookTotal;
             points = 0f;
             comboPoints = 0f;
+            BaldiTimeUI.oldPoint = 0f;
             pointsForPRank = 0f;
             rank = "D";
             List<RandomEvent> events = baseGameManager.Ec.ReflectionGetVariable("events") as List<RandomEvent>;
@@ -250,34 +289,7 @@ namespace ItsBaldiTimeRework
                 baseGameManager.Ec.GetBaldi().Despawn();
             }
 
-            if (!BasePlugin.IsNullscapeinBBInstalled)
-            {
-                List<AudioClip> chaseMusics = new List<AudioClip>();
-                if (AllSpoopMusics.Count > 0)
-                {
-                    foreach (AudioClip music in AllSpoopMusics)
-                    {
-                        string levelTitle = Singleton<CoreGameManager>.Instance.sceneObject.levelTitle;
-                        chaseMusics.Add(music);
-
-                        /*bool StartWithF = levelTitle.StartsWith("F");
-                        if (music.name.Contains("_" + Singleton<CoreGameManager>.Instance.sceneObject.levelTitle) || !StartWithF)
-                        {
-                            chaseMusics.Add(music);
-                        }
-                        if (!music.name.Contains("_F1") && !music.name.Contains("_F2") && !music.name.Contains("_F3") && !music.name.Contains("_F4") && !music.name.Contains("_F5"))
-                        {
-                            chaseMusics.Add(music);
-                        }*/
-                    }
-                }
-                if (chaseMusics.Count > 0)
-                {
-                    AudioClip choosedMusic = chaseMusics[Random.Range(0, chaseMusics.Count - 1)];
-                    BaseGameManagerPatches.musPlayer.Stop();
-                    BaseGameManagerPatches.musPlayer.Play(choosedMusic, true);
-                }
-            }
+            PlaySpoopMusic();
 
             Object.Destroy(MainGameManagerPatches.happyBaldi.gameObject);
             MainGameManagerPatches.happyBaldi = null;
@@ -313,35 +325,6 @@ namespace ItsBaldiTimeRework
                 baseGameManager.Ec.GetBaldi().Despawn();
             }
 
-            if (!BasePlugin.IsNullscapeinBBInstalled)
-            {
-                List<AudioClip> chaseMusics = new List<AudioClip>();
-                if (AllSpoopMusics.Count > 0)
-                {
-                    foreach (AudioClip music in AllSpoopMusics)
-                    {
-                        string levelTitle = Singleton<CoreGameManager>.Instance.sceneObject.levelTitle;
-                        chaseMusics.Add(music);
-
-                        /*bool StartWithF = levelTitle.StartsWith("F");
-                        if (music.name.Contains("_" + Singleton<CoreGameManager>.Instance.sceneObject.levelTitle) || !StartWithF)
-                        {
-                            chaseMusics.Add(music);
-                        }
-                        if (!music.name.Contains("_F1") && !music.name.Contains("_F2") && !music.name.Contains("_F3") && !music.name.Contains("_F4") && !music.name.Contains("_F5"))
-                        {
-                            chaseMusics.Add(music);
-                        }*/
-                    }
-                }
-                if (chaseMusics.Count > 0)
-                {
-                    AudioClip choosedMusic = chaseMusics[Random.Range(0, chaseMusics.Count - 1)];
-                    BaseGameManagerPatches.musPlayer.Stop();
-                    BaseGameManagerPatches.musPlayer.Play(choosedMusic, true);
-                }
-            }
-
             baseGameManager.StartCoroutine(WaitForLastNotebook(baseGameManager));
         }
         public static IEnumerator WaitForLastNotebook(BaseGameManager baseGameManager)
@@ -370,6 +353,13 @@ namespace ItsBaldiTimeRework
         }
         public static void Lapping(BaseGameManager baseGameManager, SoundObject soundObject = null)
         {
+            foreach (NPC npc in baseGameManager.Ec.Npcs)
+            {
+                if (npc.TryGetComponent(out BaldiFace face))
+                {
+                    face.behaviorStateMachine.ChangeState(new BaldiFace_Wait(face, false));
+                }
+            }
             lap++;
             PowerLeverController[] powerLeverControllers = Object.FindObjectsOfType<PowerLeverController>();
             List<RoomController> poweredRooms = new List<RoomController>();
