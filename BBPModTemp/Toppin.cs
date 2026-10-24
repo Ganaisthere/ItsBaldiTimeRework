@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections;
+﻿using System.Collections;
 using Unity.Mathematics;
 using UnityEngine;
 
@@ -57,7 +56,8 @@ namespace ItsBaldiTimeRework
             {
                 toppin.Entity.Teleport(Singleton<CoreGameManager>.Instance.GetPlayer(0).transform.position);
             }
-            npc.Navigator.SetSpeed(14f + dist / 3f);
+            float walkSpeed = math.max(16f, Singleton<CoreGameManager>.Instance.GetPlayer(0).plm.walkSpeed);
+            npc.Navigator.SetSpeed(walkSpeed - 2f + walkSpeed / 16f * dist / 3f);
         }
         public override void Exit()
         {
@@ -103,6 +103,11 @@ namespace ItsBaldiTimeRework
             }
             BaldiTimeActions.toppins.Add(toppin);
             Singleton<CoreGameManager>.Instance.audMan.PlaySingle(BasePlugin.AssetMan.Get<SoundObject>("sfx_collecttoppin"));
+
+            if (Other.CLC("skid.librarylib") && BaldiTimeActions.toppins.Count >= BaldiTimeActions.toppinsTotal)
+            {
+                LibrarylibAchievementsSupport.RewardAchievement("StudentSavior");
+            }
 
             toppin.StartCoroutine(SaveAnimations(toppin));
         }

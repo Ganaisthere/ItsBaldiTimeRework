@@ -38,8 +38,8 @@
     <Reference Include="HarmonyXInterop">
       <HintPath>..\..\..\..\..\steam\steamapps\common\Baldi's Basic Plus\BepInEx\core\HarmonyXInterop.dll</HintPath>
     </Reference>
-    <Reference Include="IvanLom_API">
-      <HintPath>..\..\..\..\..\DESKTOP\新建文件夹\IvanLom_API.dll</HintPath>
+    <Reference Include="LibraryLib">
+      <HintPath>..\..\..\..\..\DESKTOP\新建文件夹\LibraryLib.dll</HintPath>
     </Reference>
     <Reference Include="Mono.Cecil">
       <HintPath>..\..\..\..\..\steam\steamapps\common\Baldi's Basic Plus\BepInEx\core\Mono.Cecil.dll</HintPath>
@@ -76,6 +76,15 @@
     </Reference>
     <Reference Include="NullscapeinBB">
       <HintPath>..\..\..\..\..\DESKTOP\新建文件夹\NullscapeinBB.dll</HintPath>
+    </Reference>
+    <Reference Include="PlusLevelStudio">
+      <HintPath>..\..\..\..\..\DESKTOP\新建文件夹\PlusLevelStudio.dll</HintPath>
+    </Reference>
+    <Reference Include="PlusStudioLevelFormat">
+      <HintPath>..\..\..\..\..\DESKTOP\新建文件夹\PlusStudioLevelFormat.dll</HintPath>
+    </Reference>
+    <Reference Include="PlusStudioLevelLoader">
+      <HintPath>..\..\..\..\..\DESKTOP\新建文件夹\PlusStudioLevelLoader.dll</HintPath>
     </Reference>
     <Reference Include="Raldi_Tweaks">
       <HintPath>..\..\..\..\..\DESKTOP\新建文件夹\Raldi_Tweaks.dll</HintPath>

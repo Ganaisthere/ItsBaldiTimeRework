@@ -9,19 +9,26 @@ using MTM101BaldAPI.OptionsAPI;
 using MTM101BaldAPI.Registers;
 using MTM101BaldAPI.SaveSystem;
 using Newtonsoft.Json;
+using NilLib.Builders;
+using PlusStudioLevelFormat;
+using PlusStudioLevelLoader;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using UnityEngine;
 using static BepInEx.BepInDependency;
 
 namespace ItsBaldiTimeRework
 {
-    [BepInPlugin("ganaisthere.plus.itsbalditimerework", "Its Baldi Time Reworked", "0.2.2.0")]
+    [BepInPlugin("ganaisthere.plus.itsbalditimerework", "Its Baldi Time: Reworked", "0.3.0.0")]
+
     [BepInDependency("mtm101.rulerp.bbplus.baldidevapi")]
+    [BepInDependency("mtm101.rulerp.baldiplus.levelstudioloader")]
     [BepInDependency("Nil.Library")]
+
     [BepInDependency("pixelguy.pixelmodding.baldiplus.custommainmenusapi", DependencyFlags.SoftDependency)]
+    [BepInDependency("mtm101.rulerp.baldiplus.levelstudio", DependencyFlags.SoftDependency)]
+    [BepInDependency("skid.librarylib", DependencyFlags.SoftDependency)]
     //[BepInDependency("il.modded.raldi.tweaks", DependencyFlags.SoftDependency)]//IDK why it's broken
     //[BepInDependency("Nil.NullscapeinBB", DependencyFlags.SoftDependency)]//IDK why it's broken too
     //[BepInIncompatibility("com.styx.baldi.quickstart")]//Broken
@@ -65,29 +72,43 @@ namespace ItsBaldiTimeRework
                 replaceComboLevels = false;
             }
         }
+
+        public class Texture2DMeta
+        {
+            [JsonProperty("PixelsPerUnit")]
+            public float pixelsPerUnit;
+
+            [JsonProperty("Pivot")]
+            public string[] vector2;
+
+            public Texture2DMeta()
+            {
+                pixelsPerUnit = 114514f;
+                vector2 = new string[2] { "0.5f", "0.5f" };
+            }
+        }
+
         public static Dictionary<string, PackMeta> AllPacks = new Dictionary<string, PackMeta>();
         public static List<string> AllPackStrings = new List<string>();
         public static List<string> LoadedPacks = new List<string>();
-
         //---------------------------------------------------------------------
-        public ConfigEntry<bool> ConfigUniqueGenerator;
         public ConfigEntry<bool> ConfigShowToppins;
+        public ConfigEntry<bool> ConfigLapPortalPositions;
         public ConfigEntry<bool> ConfigOpeningAnimations;
         public ConfigEntry<int> ConfigMusicVolume;
         public ConfigEntry<CameraShakeStyle> ConfigCameraShakeStyle;
         public ConfigEntry<float> ConfigCameraShakeSpeed;
         public ConfigEntry<float> ConfigCameraShakeIntensity;
+        public ConfigEntry<bool> ConfigBaldiFaceAfterImage;
+        public ConfigEntry<bool> ConfigRemoveAllBaldiTimeAchievements;
         //---------------------------------------------------------------------
-        //public TextMeshProUGUI PackListText;
-        //public TextMeshProUGUI PackDescriptionText;
-        //public TextMeshProUGUI PackAuthorText;
-        //public List<string> PackList = new List<string>();
-        //public int PackIndex = 0;
-        //public ConfigEntry<int> configPackIndex;
-        //public int PackOptionsIndex => configPackIndex.Value;
+        public static MenuToggle ToggleBaldiFaceAfterImage;
         //----------------------------------------------------------------------
         public static bool IsRaldiTweaksInstalled = false;
         public static bool IsNullscapeinBBInstalled = false;
+        //----------------------------------------------------------------------
+        public static RoomCategory SRCategory = EnumExtensions.ExtendEnum<RoomCategory>("BT_SecretRoom");
+        public static List<WeightedRoomAsset> WeightedSecretRoomAssets = new List<WeightedRoomAsset>();
         //----------------------------------------------------------------------
         public void Update()
         {
@@ -96,7 +117,13 @@ namespace ItsBaldiTimeRework
 
             //-----------------------------------------------------------------
 
-
+            if (ToggleBaldiFaceAfterImage != null)
+            {
+                if (ToggleBaldiFaceAfterImage.gameObject != null)
+                {
+                    ConfigBaldiFaceAfterImage.Value = ToggleBaldiFaceAfterImage.Value;
+                }
+            }
         }
         //---------------------------------------------------------------------
         public void Awake()
@@ -114,6 +141,13 @@ namespace ItsBaldiTimeRework
                 "Music Volume",
                 10,
                 "The volume of the music in this mod. (Max 10, Min 0)"
+            );
+            ConfigBaldiFaceAfterImage = Config.Bind
+            (
+                "General",
+                "BaldiFace Effects",
+                true,
+                "If true, BaldiFace will have a red trailing effect when moving, just like what Pizzaface does in Pizzatower."
             );
             ConfigCameraShakeStyle = Config.Bind
             (
@@ -139,49 +173,60 @@ Beat - The camera will sway rhythmically from side to side."
                 4f,
                 "The camera shake intensity after you begining baldi time."
             );
-            ConfigUniqueGenerator = Config.Bind
-            (
-                "Gameplay",
-                "Unique Generator - WIP",
-                false,
-                @"If true, the mod's unique modification of the generator will be enabled:
-Each floor has the floor 2 layout of the vanilla game (Expect Floor 5);
-Floor type will not limited by the number of floors;
-The classroom activity will be selected from all activities."
-            );
             ConfigShowToppins = Config.Bind
             (
                 "Gameplay",
                 "Show Toppins",
-                false,
+                true,
                 "If true, when you get a toppin, he/she will follow you as an ENTITY instead of hiding."
+            );
+            ConfigLapPortalPositions = Config.Bind
+            (
+                "Gameplay",
+                "Lap Portal Spawn Near Elevator",
+                true,
+                "If true, The Lap Portal will automatically teleport to the nearest elevator instead of staying at random places."
+            );
+            ConfigRemoveAllBaldiTimeAchievements = Config.Bind
+            (
+                "Debug",
+                "Remove All BaldiTime Achievements",
+                false,
+                "If true, the mod will try clear all achievements added by this mod when you open the game (if Librarylib is installed), and reset this configuration option to false."
             );
 
             Instance = this;
             harmony.PatchAllConditionals();
             ModdedSaveGame.AddSaveHandler(base.Info);
-            LoadingEvents.RegisterOnAssetsLoaded(base.Info, this.LoadAssets(), LoadingEventOrder.Start);
-            GeneratorManagement.Register(this, GenerationModType.Addend, AddObjects);
-
-            if (Chainloader.PluginInfos.ContainsKey("pixelguy.pixelmodding.baldiplus.custommainmenusapi"))
-            {
-                string corePath = Path.Combine(AssetLoader.GetModPath(this), ".Core");
-                if (Directory.Exists(corePath))
-                {
-                    CustomMainMenuSupport.sprite = AssetLoader.SpriteFromFile(Path.Combine(corePath, "Menu.png"), new Vector2(0.5f, 0.5f));
-                    AssetLoader.MidiFromFile(Path.Combine(corePath, "TitlePEPBRMG.mid"), "TitlePEPBRMG");
-                    CustomMainMenuSupport.Setup();
-                }
-            }
+            LoadingEvents.RegisterOnAssetsLoaded(base.Info, this.LoadAssets(), LoadingEventOrder.Pre);
+            GeneratorManagement.Register(this, GenerationModType.Addend, ChangeGenerators);
+            CustomOptionsCore.OnMenuInitialize += OnMen;
 
             AddEnglishLocalization("Subtitles_English.json", ".Core");
-            LoadResources(harmony);
 
-            CustomOptionsCore.OnMenuInitialize += OnMen;
+            string corePath = Path.Combine(AssetLoader.GetModPath(this), ".Core");
+            if (Other.CLC("pixelguy.pixelmodding.baldiplus.custommainmenusapi"))
+            {
+                CustomMainMenuSupport.sprite = AssetLoader.SpriteFromFile(Path.Combine(corePath, "Menu.png"), new Vector2(0.5f, 0.5f));
+                AssetLoader.MidiFromFile(Path.Combine(corePath, "TitlePEPBRMG.mid"), "TitlePEPBRMG");
+                CustomMainMenuSupport.Setup();
+            }
+            if (Other.CLC("skid.librarylib"))
+            {
+                LibrarylibAchievementsSupport.CreateAchievements();
+            }
+
+            LoadResources(harmony);
         }
 
         private void OnMen(OptionsMenu __instance, CustomOptionsHandler handler)
         {
+            if (Other.CLC("skid.librarylib") && ConfigRemoveAllBaldiTimeAchievements.Value)
+            {
+                LibrarylibAchievementsSupport.ClearAllBaldiTimeAchievements();
+            }
+            ConfigRemoveAllBaldiTimeAchievements.Value = false;
+
             handler.AddCategory<Options_General>("BaldiTimeRE\n- General -");
             handler.AddCategory<Options_Packs>("BaldiTimeRE\n- Packs -");
         }
@@ -285,6 +330,7 @@ The classroom activity will be selected from all activities."
             AddSoundObject("rankup4.ogg", "SoundObjects/Effects");
             AddSoundObject("rankup5.ogg", "SoundObjects/Effects");
             AddSoundObject("sfx_collecttoppin.ogg", "SoundObjects/Effects");
+            AddSoundObject("sfx_collectgiantpizza.ogg", "SoundObjects/Effects");
             AddSoundObject("sfx_explosion.ogg", "SoundObjects/Effects");
             AddSoundObject("Explosion.wav", "SoundObjects/Effects");
             AddSoundObject("sfx_lapenter.ogg", "SoundObjects/Effects");
@@ -305,8 +351,8 @@ The classroom activity will be selected from all activities."
             AddTexture2D("BaldiFace.png", "Textures/Entity", new Vector2(0.5f, 0.4f), 8f);
             AddTexture2D("BaldiFace_Scraed.png", "Textures/Entity", new Vector2(0.5f, 0.4f), 8f);
             AddTexture2D("BaldiFace_Defeated.png", "Textures/Entity", new Vector2(0.5f, 0.4f), 8f);
-            AddTexture2D("LapPortal_0.png", "Textures/Entity", true, 16f);
-            AddTexture2D("LapPortal_1.png", "Textures/Entity", true, 16f);
+            AddTexture2D("LapPortal_0.png", "Textures/Entity", new Vector2(0.5f, 0.4f), 32f);
+            AddTexture2D("LapPortal_1.png", "Textures/Entity", new Vector2(0.5f, 0.4f), 32f);
             AddTexture2D("Toppins_0_Idle.png", "Textures/Entity", new Vector2(0.5f, 0.6f));
             AddTexture2D("Toppins_0_Yay.png", "Textures/Entity", new Vector2(0.5f, 0.6f));
             AddTexture2D("Toppins_1_Idle.png", "Textures/Entity", new Vector2(0.5f, 0.6f));
@@ -383,21 +429,14 @@ The classroom activity will be selected from all activities."
         {
             yield return 1225;
 
-            if (ConfigUniqueGenerator.Value)
+            foreach (var i in Chainloader.PluginInfos)
             {
-                yield return "Find Rooms...";
-
-                RoomAsset[] allRoomAssets = Resources.FindObjectsOfTypeAll<RoomAsset>().ToArray();
-                foreach (RoomAsset roomAsset in allRoomAssets)
-                {
-                    if (roomAsset.category == RoomCategory.Class)
-                    {
-                        classWeightedRoomAsset.Add(new WeightedRoomAsset { selection = roomAsset, weight = 100 });
-                    }
-                }
+                Log("----------------------");
+                Log(i.Key);
             }
+            Log("----------------------");
 
-            yield return "Add ItemObjects...";
+            yield return "Adding ItemObjects...";
             ItemObject BaldiClock = new ItemBuilder(Info)
                 .SetNameAndDescription("Itm_BaldiClock", "Desc_BaldiClock")
                 .SetSprites(AssetMan.Get<Sprite>("BaldiClockIcon_Large"), AssetMan.Get<Sprite>("BaldiClockIcon_Large_Transparent"))
@@ -405,22 +444,48 @@ The classroom activity will be selected from all activities."
                 .SetShopPrice(12251225)
                 .SetGeneratorCost(12251225)
                 .SetItemComponent<ITM_BaldiClock>()
-                .SetMeta(ItemFlags.InstantUse, new string[] { "BaldiClock" })
+                .SetMeta(
+                    ItemFlags.InstantUse,
+                    new string[]
+                    {
+                        "BaldiClock",
+                        "crmp_iou_sticker_nooverride",
+                        "crmp_iou_sticker_nodisguise"
+                    })
                 .SetAsInstantUse()
                 .SetPickupSound(AssetMan.Get<SoundObject>("bellcollectsmall"))
                 .Build();
             AssetMan.Add("BaldiClock", BaldiClock);
+            LevelLoaderPlugin.Instance.itemObjects.Add("BaldiClock", BaldiClock);
 
             //MTM101BaldAPI.Registers.ItemMetaStorage.Instance.Get(null).tags.Contains("");
 
-            yield return "Add NPCs...";
+            yield return "Adding NPCs...";
+
+            Texture2D PosterTexture = AddTexture2DInCore("pri_toppins.png", false, "Posters");
             Toppin toppin = new NPCBuilder<Toppin>(Info)
                 .SetName("Toppin")
                 .SetEnum("Toppin")
                 .IgnorePlayerOnSpawn()
                 .SetAudioTimescaleType(TimeScaleType.Player)
-                .AddMetaFlag(NPCFlags.StandardNoCollide)
-                .SetAirborne()
+                .SetMetaTags(new string[]
+                    {
+                        "ignoreGabby",
+                        "RebProtection",
+                        "RMS_VensaCanNotEat",
+                        "RMS_Guilar_NoStrings",
+                        "npp_flare_fireimmune",
+                        "npp_felix_ignore",
+                        "npp_detentionman_ignore",
+                        "npp_noloot",
+                        "no_balloon_frenzy",
+                        "nhp_stickers_wrathimmunity",
+                        "nhp_npcs_ignoreportalstar",
+                        "nhp_items_ignoreherring",
+                        "nhp_events_canteat"
+                    })
+                .AddMetaFlag(NPCFlags.StandardNoCollide | NPCFlags.NonStandardSpawn)
+                .SetPoster(PosterTexture, "PST_PRI_Toppin1", "PST_PRI_Toppin2")
                 .Build();
             toppin.SFX_Get = AssetMan.Get<SoundObject>("sfx_collecttoppin");
             toppin.CageSprite = AssetMan.Get<Sprite>("ToppinsCage");
@@ -431,70 +496,192 @@ The classroom activity will be selected from all activities."
                 toppin.YaySprite[i] = AssetMan.Get<Sprite>("Toppins_" + i.ToString() + "_Yay");
             }
             AssetMan.Add("Toppin", toppin);
+            LevelLoaderPlugin.Instance.npcAliases.Add("Toppin", toppin);
+            PosterObject poster = toppin.Poster;
+            LevelLoaderPlugin.Instance.posterAliases.Add(poster.baseTexture.name, poster);
 
+            PosterTexture = AddTexture2DInCore("pri_lapportal.png", false, "Posters");
             LapPortal lapPortal = new NPCBuilder<LapPortal>(Info)
                 .SetName("LapPortal")
                 .SetEnum("LapPortal")
                 .IgnorePlayerOnSpawn()
                 .SetAudioTimescaleType(TimeScaleType.Player)
-                .AddMetaFlag(NPCFlags.StandardNoCollide)
+                .SetMetaTags(new string[]
+                    {
+                        "ignoreGabby",
+                        "RebProtection",
+                        "RMS_VensaCanNotEat",
+                        "RMS_Guilar_NoStrings",
+                        "npp_flare_fireimmune",
+                        "npp_felix_ignore",
+                        "npp_detentionman_ignore",
+                        "npp_noloot",
+                        "no_balloon_frenzy",
+                        "nhp_leveltypes_bridgeignore",
+                        "nhp_stickers_wrathimmunity",
+                        "nhp_npcs_ignoreportalstar",
+                        "nhp_items_ignoreherring",
+                        "nhp_events_canteat"
+                    })
+                .AddMetaFlag(NPCFlags.HasSprite | NPCFlags.NonStandardSpawn)
                 .SetAirborne()
+                .SetPoster(PosterTexture, "PST_PRI_LapPortal1", "PST_PRI_LapPortal2")
                 .Build();
             lapPortal.sprites[0] = AssetMan.Get<Sprite>("LapPortal_0");
             lapPortal.sprites[1] = AssetMan.Get<Sprite>("LapPortal_1");
             lapPortal.spriteRenderer[0].sprite = lapPortal.sprites[0];
             AssetMan.Add("LapPortal", lapPortal);
+            LevelLoaderPlugin.Instance.npcAliases.Add("LapPortal", lapPortal);
+            poster = lapPortal.Poster;
+            LevelLoaderPlugin.Instance.posterAliases.Add(poster.baseTexture.name, poster);
 
+            PosterTexture = AddTexture2DInCore("pri_baldiface.png", false, "Posters");
             BaldiFace baldiFace = new NPCBuilder<BaldiFace>(Info)
                 .SetName("BaldiFace")
                 .SetEnum("BaldiFace")
                 .IgnorePlayerOnSpawn()
                 .SetAudioTimescaleType(TimeScaleType.Npc)
-                .AddMetaFlag(NPCFlags.StandardNoCollide)
+                .SetMetaTags(new string[]
+                    {
+                        "npp_noloot",
+                        "no_balloon_frenzy",
+                        "custom_mode_force_npc_in_list",
+                        "nhp_leveltypes_bridgeignore",
+                        "nhp_items_ignoreherring",
+                        "nhp_events_canteat"
+                    })
+                .AddMetaFlag(NPCFlags.StandardNoCollide | NPCFlags.NonStandardSpawn)
                 .SetAirborne()
                 .IgnorePlayerVisibility()
                 .SetWanderEnterRooms()
+                .SetPoster(PosterTexture, "PST_PRI_BaldiFace1", "PST_PRI_BaldiFace2")
                 .Build();
             baldiFace.spriteRenderer[0].sprite = AssetMan.Get<Sprite>("BaldiFace");
-            //baldiFace.spriteRenderer[0].
             AssetMan.Add("BaldiFace", baldiFace);
+            LevelLoaderPlugin.Instance.npcAliases.Add("BaldiFace", baldiFace);
+            poster = baldiFace.Poster;
+            LevelLoaderPlugin.Instance.posterAliases.Add(poster.baseTexture.name, poster);
+
+            yield return "Adding Rooms...";
+
+            RoomFunctionContainer secretRoomFunctionContainer = RoomFunctionContainerBuilder.CreateBaseObject()
+                .SetName("secretRoomFunctionContainer")
+                .AddFunction<SecretRoomFunction>(out _)
+                .AddFunction<CoverRoomFunction>(out _)
+                .AddFunction<CoverInGameRoomFunction>(out _)
+                .AddFunction<BlockNavigationRoomFunction>(out _)
+                .Build();
+            secretRoomFunctionContainer.gameObject.GetComponent<CoverInGameRoomFunction>().hardCover = true;
+
+            AssetMan.Add("secretRoomFunctionContainer", secretRoomFunctionContainer);
+
+            Texture2D SRT_C = AddTexture2DInCore("SecretRoomTile_Ceil.png", false, "Rooms/SecretRoom");
+            Texture2D SRT_F = AddTexture2DInCore("SecretRoomTile_Floor.png", false, "Rooms/SecretRoom");
+            Texture2D SRT_W = AddTexture2DInCore("SecretRoomTile_Wall.png", false, "Rooms/SecretRoom");
+            Texture2D SRD_C = AddTexture2DInCore("Balls_Closed.png", false, "Rooms/SecretRoom");
+            Texture2D SRD_O = AddTexture2DInCore("Balls_Opened.png", false, "Rooms/SecretRoom");
+
+            LevelLoaderPlugin.Instance.roomTextureAliases.Add("SecretRoomTile_Ceil", SRT_C);
+            LevelLoaderPlugin.Instance.roomTextureAliases.Add("SecretRoomTile_Floor", SRT_F);
+            LevelLoaderPlugin.Instance.roomTextureAliases.Add("SecretRoomTile_Wall", SRT_W);
+
+            StandardDoorMats SRD = ObjectCreators.CreateDoorDataObject("BallsDoor", SRD_O, SRD_C);
+            
+            RoomSettings SecretRoomSettings = new RoomSettings(SRCategory, RoomType.Room, new Color(0f, 0f, 0f, 0f), SRD)
+            {
+                container = secretRoomFunctionContainer
+                //container = LevelLoaderPlugin.Instance.roomSettings["saferoom"].container
+            };
+
+            LevelLoaderPlugin.Instance.roomSettings.Add("SecretRoom", SecretRoomSettings);
+
+            string mainRoomPath = Path.Combine(AssetLoader.GetModPath(this), ".Core", "Rooms", "SecretRoom");
+            string[] roomPaths = Directory.GetFiles(mainRoomPath, "*.rbpl", SearchOption.TopDirectoryOnly);
+            foreach (string filePath in roomPaths)
+            {
+                using (BinaryReader reader = new BinaryReader(File.OpenRead(filePath)))
+                {
+                    ExtendedRoomAsset asset = LevelImporter.CreateRoomAsset(BaldiRoomAsset.Read(reader), false);
+                    asset.spawnWeight = 500;
+                    asset.maxItemValue = 300;
+                    asset.minItemValue = 50;
+                    WeightedSecretRoomAssets.Add
+                    (
+                        new WeightedRoomAsset()
+                        {
+                            selection = asset,
+                            weight = 100
+                        }
+                    );
+                    reader.Close();
+                }
+            }
+
+            if (Other.CLC("mtm101.rulerp.baldiplus.levelstudio"))
+            {
+                yield return "Adding Level Studio Support...";
+
+                AddTexture2DInCore("room_secret.png", true, "EditorUI");
+                AddTexture2DInCore("npc_lapportal.png", true, "EditorUI");
+                AddTexture2DInCore("npc_toppin.png", true, "EditorUI");
+                AddTexture2DInCore("npc_baldiface.png", true, "EditorUI");
+
+                LevelStudioSupport.Setup();
+            }
 
             yield break;
         }
 
-        internal void AddObjects(string floorName, int floorNumber, SceneObject sceneObject)
+        internal void ChangeGenerators(string floorName, int floorNumber, SceneObject sceneObject)
         {
             CustomLevelObject[] customLevelObjects = CustomLevelObjectExtensions.GetCustomLevelObjects(sceneObject);
             if (floorName.StartsWith("F"))
             {
-                foreach (CustomLevelObject customLevelObject in customLevelObjects)
+                foreach (CustomLevelObject CLO in customLevelObjects)
                 {
-                    if (ConfigUniqueGenerator.Value)
+                    RoomGroup SRRoomGroup = new RoomGroup()
                     {
-                        customLevelObject.minSize = new IntVector2(25, 25);
-                        customLevelObject.maxSize = new IntVector2(35, 35);
-                        customLevelObject.exitCount = 2;
-                        customLevelObject.minEvents = 2;
-                        customLevelObject.maxEvents = 3;
-                        customLevelObject.minSpecialRooms = 1;
-                        customLevelObject.maxSpecialRooms = 2;
-                        customLevelObject.maxItemValue = 600;
-                        foreach (RoomGroup roomGroup in customLevelObject.roomGroup)
+                        name = "SecretRoom",
+                        maxRooms = 3,
+                        minRooms = 3,
+                        stickToHallChance = 0.5f,
+                        ceilingTexture = new WeightedTexture2D[]
                         {
-                            if (roomGroup.name == "Class")
+                            new WeightedTexture2D()
                             {
-                                roomGroup.minRooms = 7;
-                                roomGroup.maxRooms = 7;
-                                roomGroup.potentialRooms = roomGroup.potentialRooms.AddRangeToArray(classWeightedRoomAsset.ToArray());
+                                selection = AssetMan.Get<Texture2D>("SecretRoomTile_Ceil"),
+                                weight = 100
                             }
-                            if (roomGroup.name == "Faculty")
+                        },
+                        floorTexture = new WeightedTexture2D[]
+                        {
+                            new WeightedTexture2D()
                             {
-                                roomGroup.minRooms = 8;
-                                roomGroup.maxRooms = 12;
+                                selection = AssetMan.Get<Texture2D>("SecretRoomTile_Floor"),
+                                weight = 100
                             }
-                        }
-                    }
-                    customLevelObject.MarkAsNeverUnload();
+                        },
+                        wallTexture = new WeightedTexture2D[]
+                        {
+                            new WeightedTexture2D()
+                            {
+                                selection = AssetMan.Get<Texture2D>("SecretRoomTile_Wall"),
+                                weight = 100
+                            }
+                        },
+                        light = new WeightedTransform[]
+                        {
+                            new WeightedTransform
+                            {
+                                selection = LevelLoaderPlugin.Instance.lightTransforms["fluorescent"],
+                                weight = 100
+                            }
+                        },
+                        potentialRooms = WeightedSecretRoomAssets.ToArray(),
+                    };
+
+                    CLO.roomGroup = CLO.roomGroup.AddRangeToArray(new RoomGroup[] { SRRoomGroup });
+                    CLO.MarkAsNeverUnload();
                 }
             }
         }
@@ -815,7 +1002,56 @@ The classroom activity will be selected from all activities."
                     if (btwSprite)
                     {
                         Texture2D texture2D = AssetMan.Get<Texture2D>(Path.GetFileNameWithoutExtension(file));
-                        AssetMan.Add(Path.GetFileNameWithoutExtension(file), AssetLoader.SpriteFromTexture2D(texture2D, pixelsPerUnit));
+
+                        float pixels = pixelsPerUnit;
+                        Vector2 vector = new Vector2(0.5f, 0.5f);
+                        string file2 = Path.Combine(AssetLoader.GetModPath(this), "ResourcePacks", pack, chlidPath, Path.GetFileNameWithoutExtension(file) + ".json");
+                        if (File.Exists(file2))
+                        {
+                            Texture2DMeta texture2DMeta = JsonConvert.DeserializeObject<Texture2DMeta>(File.ReadAllText(file2));
+                            if (texture2DMeta.pixelsPerUnit != 114514f)
+                            {
+                                pixels = texture2DMeta.pixelsPerUnit;
+                                Log(fileNameWithExtension + " - Overrided PixelsPerUnit: " + pixels, 1);
+                            }
+                            if (texture2DMeta.vector2.Length == 2)
+                            {
+                                if (texture2DMeta.vector2[0] != "114f" && texture2DMeta.vector2[1] != "514f")
+                                {
+                                    float a = 0.5f;
+                                    float b = 0.5f;
+                                    if (float.TryParse(texture2DMeta.vector2[0], out float c))
+                                    {
+                                        a = c;
+                                    }
+                                    else if (int.TryParse(texture2DMeta.vector2[0], out int d))
+                                    {
+                                        a = d;
+                                    }
+                                    if (float.TryParse(texture2DMeta.vector2[1], out float e))
+                                    {
+                                        b = e;
+                                    }
+                                    else if (int.TryParse(texture2DMeta.vector2[1], out int f))
+                                    {
+                                        b = f;
+                                    }
+                                    vector = new Vector2(a, b);
+                                    Log(fileNameWithExtension + " - Overrided Pivot: " + vector, 1);
+                                }
+                            }
+                        }
+
+                        /*string file3 = Path.Combine(AssetLoader.GetModPath(this), "ResourcePacks", ".Vanilla", chlidPath, Path.GetFileNameWithoutExtension(file) + ".json");
+                        string[] Lines = new string[] {
+                            "{",
+                            "       \"PixelsPerUnit\": " + pixelsPerUnit.ToString() + ",",
+                            "       \"Pivot\": [0.5f, 0.5f],",
+                            "}"
+                        };
+                        File.WriteAllLines(file3, Lines);*/
+
+                        AssetMan.Add(Path.GetFileNameWithoutExtension(file), AssetLoader.SpriteFromTexture2D(texture2D, vector, pixels));
                     }
                     failed = false;
                     break;
@@ -838,7 +1074,56 @@ The classroom activity will be selected from all activities."
                 {
                     AssetMan.Add(Path.GetFileNameWithoutExtension(file), AssetLoader.TextureFromFile(file));
                     Texture2D texture2D = AssetMan.Get<Texture2D>(Path.GetFileNameWithoutExtension(file));
-                    AssetMan.Add(Path.GetFileNameWithoutExtension(file), AssetLoader.SpriteFromTexture2D(texture2D, vector2, pixelsPerUnit));
+
+                    float pixels = pixelsPerUnit;
+                    Vector2 vector = vector2;
+                    string file2 = Path.Combine(AssetLoader.GetModPath(this), "ResourcePacks", pack, chlidPath, Path.GetFileNameWithoutExtension(file) + ".json");
+                    if (File.Exists(file2))
+                    {
+                        Texture2DMeta texture2DMeta = JsonConvert.DeserializeObject<Texture2DMeta>(File.ReadAllText(file2));
+                        if (texture2DMeta.pixelsPerUnit != 114514f)
+                        {
+                            pixels = texture2DMeta.pixelsPerUnit;
+                            Log(fileNameWithExtension + " - Overrided PixelsPerUnit: " + pixels, 1);
+                        }
+                        if (texture2DMeta.vector2.Length == 2)
+                        {
+                            if (texture2DMeta.vector2[0] != "114f" && texture2DMeta.vector2[1] != "514f")
+                            {
+                                float a = vector2.x;
+                                float b = vector2.y;
+                                if (float.TryParse(texture2DMeta.vector2[0], out float c))
+                                {
+                                    a = c;
+                                }
+                                else if (int.TryParse(texture2DMeta.vector2[0], out int d))
+                                {
+                                    a = d;
+                                }
+                                if (float.TryParse(texture2DMeta.vector2[1], out float e))
+                                {
+                                    b = e;
+                                }
+                                else if (int.TryParse(texture2DMeta.vector2[1], out int f))
+                                {
+                                    b = f;
+                                }
+                                vector = new Vector2(a, b);
+                                Log(fileNameWithExtension + " - Overrided Pivot: " + vector, 1);
+                            }
+                        }
+                    }
+
+                    /*string file3 = Path.Combine(AssetLoader.GetModPath(this), "ResourcePacks", ".Vanilla", chlidPath, Path.GetFileNameWithoutExtension(file) + ".json");
+                    string[] Lines = new string[] {
+                        "{",
+                        "       \"PixelsPerUnit\": " + pixelsPerUnit.ToString() + ",",
+                        "       \"Pivot\": [" + vector2.x.ToString() + ", " + vector2.y.ToString() + "],",
+                        "}"
+                    };
+                    File.WriteAllLines(file3, Lines); */
+
+                    AssetMan.Add(Path.GetFileNameWithoutExtension(file), AssetLoader.SpriteFromTexture2D(texture2D, vector, pixels));
                     failed = false;
                     break;
                 }
@@ -905,22 +1190,28 @@ The classroom activity will be selected from all activities."
                 Log("File not found: " + file, 1);
             }
         }
-        internal void AddTexture2DInCore(string fileNameWithExtension, bool btwSprite = true, float pixelsPerUnit = 50f)
+        internal Texture2D AddTexture2DInCore(string fileNameWithExtension, bool btwSprite = true, string chlidPath = null, float pixelsPerUnit = 50f)
         {
             string file = Path.Combine(AssetLoader.GetModPath(this), ".Core", fileNameWithExtension);
+            if (chlidPath != null)
+            {
+                file = Path.Combine(AssetLoader.GetModPath(this), ".Core", chlidPath, fileNameWithExtension);
+            }
             if (File.Exists(file))
             {
-                AssetMan.Add(Path.GetFileNameWithoutExtension(file), AssetLoader.TextureFromFile(file));
+                Texture2D texture = AssetLoader.TextureFromFile(file);
+                AssetMan.Add(Path.GetFileNameWithoutExtension(file), texture);
                 if (btwSprite)
                 {
-                    Texture2D texture2D = AssetMan.Get<Texture2D>(Path.GetFileNameWithoutExtension(file));
-                    AssetMan.Add(Path.GetFileNameWithoutExtension(file), AssetLoader.SpriteFromTexture2D(texture2D, pixelsPerUnit));
+                    AssetMan.Add(Path.GetFileNameWithoutExtension(file), AssetLoader.SpriteFromTexture2D(texture, pixelsPerUnit));
                 }
+                return texture;
             }
             else
             {
                 Log("File not found: " + file, 2);
             }
+            return null;
         }
         internal void AddTexture2DInCore(string fileNameWithExtension, Vector2 vector2, float pixelsPerUnit = 50f)
         {
@@ -936,17 +1227,19 @@ The classroom activity will be selected from all activities."
                 Log("File not found: " + file, 2);
             }
         }
-        internal void AddMidiInCore(string fileNameWithExtension)
+        internal string AddMidiInCore(string fileNameWithExtension)
         {
             string file = Path.Combine(AssetLoader.GetModPath(this), ".Core", fileNameWithExtension);
+            string midi = null;
             if (File.Exists(file))
             {
-                AssetLoader.MidiFromFile(fileNameWithExtension, Path.GetFileNameWithoutExtension(file));
+                midi = AssetLoader.MidiFromFile(fileNameWithExtension, Path.GetFileNameWithoutExtension(file));
             }
             else
             {
                 Log("File not found: " + file, 2);
             }
+            return midi;
         }
         internal void AddEnglishLocalization(string fileNameWithExtension, string chlidPath)
         {

@@ -6,6 +6,8 @@ namespace ItsBaldiTimeRework
     {
         [SerializeField]
         public float staminaValue = 25f;
+
+        [SerializeField]
         public int pointValue = 15;
 
         public override bool Use(PlayerManager pm)

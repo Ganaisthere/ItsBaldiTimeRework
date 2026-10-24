@@ -133,17 +133,22 @@ namespace ItsBaldiTimeRework
                 StartCoroutineIguess(FadeOut(audioSource2));
             }
         }
-        public IEnumerator Meatophobia(Notebook notebook)
+        public IEnumerator Meatophobia(Notebook notebook, BaseGameManager baseGameManager)
         {
             AudioClip audioClip = BasePlugin.AssetMan.Get<AudioClip>("Meatophobia");
             PlayerManager player = Singleton<CoreGameManager>.Instance.GetPlayer(0);
             SpriteRenderer spriteRenderer = notebook.ReflectionGetVariable("sprite") as SpriteRenderer;
             spriteRenderer.sprite = BasePlugin.AssetMan.Get<Sprite>("Notebook_John");
+            if (!Other.ShouldBTPlayMus(baseGameManager))
+            {
+                yield break;
+            }
             if (audioClip == null)
             {
                 Debug.LogWarning("Oh Fxxk Where Is - Meatophobia - I Can't Find It");
                 yield break;
             }
+            yield return null;
             if (idk == 1)
             {
                 audioSource2.Stop();

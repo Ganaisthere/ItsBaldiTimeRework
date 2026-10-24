@@ -46,7 +46,30 @@ namespace ItsBaldiTimeRework
             {
                 lapPortal.spriteRenderer[0].sprite = BasePlugin.AssetMan.Get<Sprite>("LapPortal_0");
             }
-            if (!Singleton<CoreGameManager>.Instance.GetPlayer(0).ec.map.arrowTargets.Contains(lapPortal.Entity))
+            if (BasePlugin.Instance.ConfigLapPortalPositions.Value)
+            {
+                Elevator elevatorSelect = null;
+                List<float> Dists = new List<float>();
+                foreach (Elevator elevator in Singleton<BaseGameManager>.Instance.Ec.Elevators)
+                {
+                    float dist = Vector3.Distance(elevator.transform.position, Singleton<CoreGameManager>.Instance.GetPlayer(0).transform.position);
+                    Dists.Add(dist);
+                }
+                foreach (Elevator elevator in Singleton<BaseGameManager>.Instance.Ec.Elevators)
+                {
+                    float dist = Vector3.Distance(elevator.transform.position, Singleton<CoreGameManager>.Instance.GetPlayer(0).transform.position);
+                    if (dist == Dists.Min())
+                    {
+                        elevatorSelect = elevator;
+                        break;
+                    }
+                }
+                if (elevatorSelect != null)
+                {
+                    npc.Entity.Teleport(elevatorSelect.transform.position + elevatorSelect.transform.right * 10f);
+                }
+            }
+            else if (!Singleton<CoreGameManager>.Instance.GetPlayer(0).ec.map.arrowTargets.Contains(lapPortal.Entity))
             {
                 Singleton<CoreGameManager>.Instance.GetPlayer(0).ec.map.AddArrow(lapPortal.Entity, new Color(1f, 1f, 0f, 1f));
             }
@@ -103,7 +126,7 @@ namespace ItsBaldiTimeRework
             foreach (Elevator elevator in Singleton<BaseGameManager>.Instance.Ec.Elevators)
             {
                 float dist = Vector3.Distance(elevator.transform.position, Singleton<CoreGameManager>.Instance.GetPlayer(0).transform.position);
-                if (dist == Dists.Min())
+                if (dist == Dists.Max())
                 {
                     elevatorSelect = elevator;
                     break;

@@ -8,111 +8,30 @@ namespace ItsBaldiTimeRework
     [HarmonyPatch(typeof(MainGameManager))]
     public class MainGameManagerPatches
     {
-        public static HappyBaldi happyBaldi = null;
-
         [HarmonyPatch("BeginPlay")]
         [HarmonyPostfix]
         public static void BeginPlayPostfix(MainGameManager __instance)
         {
-            BaldiTimeActions.Setup(__instance);
+            Singleton<MusicManager>.Instance.StopMidi();
         }
 
         [HarmonyPatch("CreateHappyBaldi")]
         [HarmonyPrefix]
-        public static bool CreateHappyBaldiPrefix()
+        public static bool CreateHappyBaldiPrefix(MainGameManager __instance)
         {
-            return false;
+            if (Other.ShouldBTDespawnHB(__instance))
+            {
+                return false;
+            }
+            return true;
         }
 
         [HarmonyPatch("AllNotebooks")]
         [HarmonyPrefix]
         public static bool AllNotebooksPrefix(MainGameManager __instance)
         {
-            __instance.ReflectionSetVariable("allNotebooksFound", true);
-            if (BaldiTimeActions.lap < 1)
-            {
-                BaldiTimeActions.Lapping(__instance);
-            }
-            else
-            {
-                Activity lastActivity = __instance.ReflectionGetVariable("lastActivity") as Activity;
-                foreach (Activity activity in __instance.Ec.activities)
-                {
-                    if (activity != lastActivity)
-                    {
-                        activity.Corrupt(val: false);
-                        activity.SetBonusMode(val: true);
-                    }
-                }
-                __instance.Ec.ElevatorManager.SetTotalOutOfOrderElevators(__instance.Ec.Elevators.Count - 1);
-                __instance.Ec.ElevatorManager.SetAllElevators(ElevatorState.OpenForExit);
-            }
+            BaseGameManagerPatches.AllNotebooksPrefix(__instance);
             return false;
-        }
-    }
-
-    [HarmonyPatch(typeof(HudManager))]
-    public class HudManagerPatches
-    {
-        [HarmonyPatch("Awake")]
-        [HarmonyPostfix]
-        public static void AwakePostfix(HudManager __instance)
-        {
-            if (Singleton<BaseGameManager>.Instance.GameMode != GameMode.HideAndSeek)
-            {
-                return;
-            }
-            BaldiTimeUI.SetupGUI(__instance);
-            BaldiTimeUI.camTimer = 0f;
-        }
-
-        [HarmonyPatch("Update")]
-        [HarmonyPostfix]
-        public static void UpdatePostfix(HudManager __instance)
-        {
-            if (Singleton<BaseGameManager>.Instance == null)
-            {
-                return;
-            }
-            if (Singleton<BaseGameManager>.Instance.GameMode != GameMode.HideAndSeek)
-            {
-                return;
-            }
-            BaldiTimeUI.UpdateGUI(__instance);
-        }
-    }
-
-    [HarmonyPatch(typeof(CoreGameManager))]
-    public class CoreGameManagerPatches
-    {
-        [HarmonyPatch("EndGame")]
-        [HarmonyPrefix]
-        public static void EndGamePrefix(CoreGameManager __instance)
-        {
-            if (BaseGameManagerPatches.musPlayer != null)
-            {
-                BaseGameManagerPatches.musPlayer.Stop();
-            }
-        }
-    }
-
-    [HarmonyPatch(typeof(PointsAnimation))]
-    public class PointsAnimationPatches
-    {
-        [HarmonyPatch("AddScore")]
-        [HarmonyPrefix]
-        public static void EndGamePrefix(int points)
-        {
-            if (Singleton<BaseGameManager>.Instance.InPitstop())
-            {
-                return;
-            }
-            BaldiTimeActions.points += points;
-            if (BaldiTimeActions.points < 0f)
-            {
-                BaldiTimeActions.points = 0f;
-            }
-            BaldiTimeActions.AddCombo(0f, math.max(points / 10f, -10f));
         }
     }
 
@@ -132,7 +51,7 @@ namespace ItsBaldiTimeRework
         [HarmonyPrefix]
         public static bool FinishLevelPrefix(BaseGameManager __instance)
         {
-            if (!__instance.InPitstop() && __instance.managerNameKey == "Mode_HideSeek")
+            if (Other.ShouldBT(__instance))
             {
                 BaldiTimeActions.SpoopMusicsRandom = -1;
                 BaldiTimeAnimations.TitleCardRandom = -1;
@@ -157,7 +76,7 @@ namespace ItsBaldiTimeRework
 
         [HarmonyPatch("ActivityCompleted")]
         [HarmonyPostfix]
-        public static void ActivityCompletedPostfix(bool correct, BaseGameManager __instance)
+        public static void ActivityCompletedPostfix(bool correct)
         {
             if (correct)
             {
@@ -168,13 +87,12 @@ namespace ItsBaldiTimeRework
 
         [HarmonyPatch("Update")]
         [HarmonyPostfix]
-        public static void UpdatePostfix()
+        public static void UpdatePostfix(BaseGameManager __instance)
         {
-            if (Singleton<BaseGameManager>.Instance.GameMode != GameMode.HideAndSeek || Singleton<BaseGameManager>.Instance.InPitstop())
+            if (Other.ShouldBT(__instance))
             {
-                return;
+                BaldiTimeActions.Update();
             }
-            BaldiTimeActions.Update();
         }
 
         [HarmonyPatch("FinishLevel")]
@@ -186,19 +104,140 @@ namespace ItsBaldiTimeRework
 
         [HarmonyPatch("BeginPlay")]
         [HarmonyPostfix]
-        public static void BeginPlayPostfix(MainGameManager __instance)
+        public static void BeginPlayPostfix(BaseGameManager __instance)
         {
-            if (Singleton<BaseGameManager>.Instance.GameMode != GameMode.HideAndSeek || Singleton<BaseGameManager>.Instance.InPitstop())
+            if (Other.ShouldBT(__instance) && __instance.Ec.notebookTotal > 0)
+            {
+                if (__instance.gameObject.GetComponentInChildren<CustomAudioPlayer>() == null)
+                {
+                    GameObject cMPObj = new GameObject("CustomMusicPlayer");
+                    cMPObj.transform.SetParent(__instance.transform);
+                    musPlayer = cMPObj.AddComponent<CustomAudioPlayer>();
+                    musPlayer.audioSource1 = cMPObj.AddComponent<AudioSource>();
+                    musPlayer.audioSource2 = cMPObj.AddComponent<AudioSource>();
+                }
+                BaldiTimeActions.Setup(__instance);
+            }
+        }
+
+        [HarmonyPatch("AllNotebooks")]
+        [HarmonyPrefix]
+        public static bool AllNotebooksPrefix(BaseGameManager __instance)
+        {
+            if (Other.ShouldBT(__instance) && __instance.Ec.notebookTotal > 0)
+            {
+                __instance.ReflectionSetVariable("allNotebooksFound", true);
+                if (BaldiTimeActions.lap < 1)
+                {
+                    BaldiTimeActions.Lapping(__instance);
+                }
+                else
+                {
+                    Activity lastActivity = __instance.ReflectionGetVariable("lastActivity") as Activity;
+                    foreach (Activity activity in __instance.Ec.activities)
+                    {
+                        if (activity != lastActivity && !activity.InBonusMode)
+                        {
+                            activity.Corrupt(false);
+                            activity.SetBonusMode(true);
+                        }
+                    }
+                    __instance.Ec.ElevatorManager.SetTotalOutOfOrderElevators(__instance.Ec.Elevators.Count - 1);
+                    __instance.Ec.ElevatorManager.SetAllElevators(ElevatorState.OpenForExit);
+                }
+                return false;
+            }
+            return true;
+        }
+    }
+
+    [HarmonyPatch(typeof(BaldiTV))]
+    public class BaldiTVPatches
+    {
+        [HarmonyPatch("ShowLevelTimeWarning")]
+        [HarmonyPrefix]
+        public static bool ShowLevelTimeWarningPrefix()
+        {
+            return false;
+        }
+
+        [HarmonyPatch("LevelTimeWarning")]
+        [HarmonyPrefix]
+        public static bool LevelTimeWarningPrefix()
+        {
+            return false;
+        }
+
+        [HarmonyPatch("Speak")]
+        [HarmonyPrefix]
+        public static bool SpeaksPrefix(SoundObject sound)
+        {
+            if (sound.name.Contains("AllNotebook"))
+            {
+                return false;
+            }
+            return true;
+        }
+    }
+
+    [HarmonyPatch(typeof(HudManager))]
+    public class HudManagerPatches
+    {
+        [HarmonyPatch("Awake")]
+        [HarmonyPostfix]
+        public static void AwakePostfix(HudManager __instance)
+        {
+            if (Other.ShouldBT(Singleton<BaseGameManager>.Instance, false))
+            {
+                BaldiTimeUI.SetupGUI(__instance);
+            }
+            BaldiTimeUI.camTimer = 0f;
+        }
+
+        [HarmonyPatch("Update")]
+        [HarmonyPostfix]
+        public static void UpdatePostfix(HudManager __instance)
+        {
+            if (Singleton<BaseGameManager>.Instance == null)
             {
                 return;
             }
-            if (__instance.gameObject.GetComponentInChildren<CustomAudioPlayer>() == null)
+            if (Other.ShouldBT(Singleton<BaseGameManager>.Instance))
             {
-                GameObject cMPObj = new GameObject("CustomMusicPlayer");
-                cMPObj.transform.SetParent(__instance.transform);
-                musPlayer = cMPObj.AddComponent<CustomAudioPlayer>();
-                musPlayer.audioSource1 = cMPObj.AddComponent<AudioSource>();
-                musPlayer.audioSource2 = cMPObj.AddComponent<AudioSource>();
+                BaldiTimeUI.UpdateGUI(__instance);
+            }
+        }
+    }
+
+    [HarmonyPatch(typeof(CoreGameManager))]
+    public class CoreGameManagerPatches
+    {
+        [HarmonyPatch("EndGame")]
+        [HarmonyPrefix]
+        public static void EndGamePrefix(CoreGameManager __instance)
+        {
+            if (BaseGameManagerPatches.musPlayer != null)
+            {
+                BaseGameManagerPatches.musPlayer.Stop();
+            }
+        }
+    }
+
+    [HarmonyPatch(typeof(PointsAnimation))]
+    public class PointsAnimationPatches
+    {
+        [HarmonyPatch("AddScore")]
+        [HarmonyPrefix]
+        public static void EndGamePrefix(int points)
+        {
+            if (Other.ShouldBT(Singleton<BaseGameManager>.Instance))
+            {
+                BaldiTimeActions.points += points;
+                if (BaldiTimeActions.points < 0f)
+                {
+                    BaldiTimeActions.points = 0f;
+                }
+                BaldiTimeActions.AddCombo(0f, math.max(points / 10f, -5f));
             }
         }
     }
@@ -215,18 +254,18 @@ namespace ItsBaldiTimeRework
             if (BaldiTimeUI.TimerBar != null)
             {
                 BaldiTimeUI.TimerBar.rectTransform.anchoredPosition = new Vector2(0f, -38f);
-                if (Singleton<BaseGameManager>.Instance.GameMode != GameMode.HideAndSeek || Singleton<BaseGameManager>.Instance.InPitstop())
-                {
-                    BaldiTimeUI.PointDisplay.rectTransform.localScale = Vector3.zero;
-                    BaldiTimeUI.ComboBar.rectTransform.localScale = Vector3.zero;
-                }
-                else
+                if (Other.ShouldBT(Singleton<BaseGameManager>.Instance))
                 {
                     BaldiTimeUI.PointDisplay.rectTransform.localScale = Vector3.one;
                     BaldiTimeUI.ComboBar.rectTransform.localScale = Vector3.one;
                     BaldiTimeUI.RankImage.sprite = BaldiTimeUI.RankDSprite;
                     BaldiTimeUI.RankOverlay.sprite = BaldiTimeUI.RankDSprite;
                     BaldiTimeUI.RankOverlay.rectTransform.anchoredPosition = new Vector2(0f, 48f);
+                }
+                else
+                {
+                    BaldiTimeUI.PointDisplay.rectTransform.localScale = Vector3.zero;
+                    BaldiTimeUI.ComboBar.rectTransform.localScale = Vector3.zero;
                 }
             }
             BaldiTimeActions.itsBaldiTime = false;
@@ -238,7 +277,8 @@ namespace ItsBaldiTimeRework
         {
             BaseGameManager baseGameManager = Singleton<BaseGameManager>.Instance;
             BasePlugin.LogStatic(baseGameManager.managerNameKey);
-            if (!baseGameManager.InPitstop() && baseGameManager.managerNameKey == "Mode_HideSeek")
+            BasePlugin.LogStatic(baseGameManager.name);
+            if (Other.ShouldBT(baseGameManager))
             {
                 baseGameManager.StartCoroutine(BaldiTimeAnimations.TitleCard(Singleton<CoreGameManager>.Instance, baseGameManager));
             }
@@ -248,7 +288,6 @@ namespace ItsBaldiTimeRework
         [HarmonyPrefix]
         public static void StartPrefix()
         {
-            MainGameManagerPatches.happyBaldi = null;
             if (BaseGameManagerPatches.musPlayer != null)
             {
                 if (BaseGameManagerPatches.musPlayer.audioSource1 != null)
@@ -277,13 +316,12 @@ namespace ItsBaldiTimeRework
         [HarmonyPostfix]
         public static void BeginPostfix()
         {
-            if (Singleton<BaseGameManager>.Instance.GameMode != GameMode.HideAndSeek || Singleton<BaseGameManager>.Instance.InPitstop())
+            if (Other.ShouldBT(Singleton<BaseGameManager>.Instance))
             {
-                return;
-            }
-            if (BaldiTimeActions.lap > 1 || BasePlugin.AssetMan.Get<AudioClip>("Lap1-Outro") == null)
-            {
-                Singleton<MusicManager>.Instance.StopMidi();
+                if (BaldiTimeActions.lap > 1 || BasePlugin.AssetMan.Get<AudioClip>("Lap1-Outro") == null)
+                {
+                    Singleton<MusicManager>.Instance.StopMidi();
+                }
             }
         }
     }
@@ -295,37 +333,46 @@ namespace ItsBaldiTimeRework
         [HarmonyPrefix]
         public static bool Prefix(Baldi __instance, float value)
         {
-            if (Singleton<BaseGameManager>.Instance.GameMode != GameMode.HideAndSeek || Singleton<BaseGameManager>.Instance.InPitstop())
+            if (Other.ShouldBT(Singleton<BaseGameManager>.Instance))
             {
-                return true;
+                float anger = (float)__instance.ReflectionGetVariable("anger");
+                float angerSpeed = 0.75f;
+                anger += value * angerSpeed;
+                if (anger <= 0.1f)
+                {
+                    anger = 0.1f;
+                }
+                __instance.ReflectionSetVariable("anger", anger);
+                return false;
             }
-            float anger = (float)__instance.ReflectionGetVariable("anger");
-            float angerSpeed = 0.75f;
-            anger += value * angerSpeed;
-            if (anger <= 0.1f)
-            {
-                anger = 0.1f;
-            }
-            __instance.ReflectionSetVariable("anger", anger);
-            return false;
+            return true;
         }
     }
 
-    [HarmonyPatch(typeof(HappyBaldi))]
+    /*[HarmonyPatch(typeof(HappyBaldi))]
     public class HappyBaldiPatches
     {
         [HarmonyPatch("Activate")]
         [HarmonyPrefix]
         public static bool Prefix(HappyBaldi __instance)
         {
-            if (Singleton<BaseGameManager>.Instance.GameMode != GameMode.HideAndSeek || Singleton<BaseGameManager>.Instance.InPitstop())
+            if (Other.ShouldBT(Singleton<BaseGameManager>.Instance))
             {
-                return true;
+                return false;
             }
-            MainGameManagerPatches.happyBaldi = __instance;
-            return false;
+            return true;
         }
-    }
+
+        [HarmonyPatch("Activate")]
+        [HarmonyPostfix]
+        public static void Postfix(HappyBaldi __instance)
+        {
+            if (Other.ShouldBT(Singleton<BaseGameManager>.Instance))
+            {
+                Object.Destroy(__instance.gameObject);
+            }
+        }
+    }*/
 
     [HarmonyPatch(typeof(ItemManager))]
     public class ItemManagerPatches

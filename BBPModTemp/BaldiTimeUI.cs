@@ -59,6 +59,7 @@ namespace ItsBaldiTimeRework
             {
                 if (baseGameManager == null)
                 {
+                    Object.Destroy(whiteFlash_Obj);
                     yield break;
                 }
                 if (timer < 0.5f)
@@ -80,6 +81,10 @@ namespace ItsBaldiTimeRework
             {
                 if (baseGameManager == null)
                 {
+                    if (TimerBar != null)
+                    {
+                        TimerBar.rectTransform.anchoredPosition = new Vector2(0f, -38f);
+                    }
                     yield break;
                 }
                 if (TimerBar != null)
@@ -104,6 +109,11 @@ namespace ItsBaldiTimeRework
             float timer = 0f;
             while (timer < 0.5f)
             {
+                if (coreGameManager == null)
+                {
+                    Object.Destroy(text.gameObject);
+                    yield break;
+                }
                 text.rectTransform.anchoredPosition = vector + new Vector3(0f, 64f, 0f) * timer;
                 timer += Time.unscaledDeltaTime;
                 text.color = new Color(text.color.r, text.color.g, text.color.b, 1f - timer * 2f);
@@ -295,22 +305,20 @@ namespace ItsBaldiTimeRework
 
                     oldPoint = BaldiTimeActions.points + BaldiTimeActions.comboPoints;
 
-                    BasePlugin.Instance.Log("pd");
-
                     pd.StartCoroutine(PDAni(pd));
                 }
 
                 //Rank And PointDisplay
                 if (Singleton<BaseGameManager>.Instance != null)
                 {
-                    if (!Singleton<BaseGameManager>.Instance.InPitstop() && Singleton<BaseGameManager>.Instance.GameReady)
+                    if (!Singleton<BaseGameManager>.Instance.InPitstop() && Other.IsReady())
                     {
                         //Rank
                         int num = 0;
                         float fill = 1f;
                         if (BaldiTimeActions.points + BaldiTimeActions.comboPoints >= BaldiTimeActions.pointsForPRank)
                         {
-                            if (BaldiTimeActions.lap >= 2 && BaldiTimeActions.comboKeep)
+                            if (BaldiTimeActions.lap >= 2 && BaldiTimeActions.comboKeep && (BaldiTimeActions.secretRoomFound.Count >= BaldiTimeActions.secretRoomTotal))
                             {
                                 num = 5;
                             }
@@ -481,6 +489,7 @@ namespace ItsBaldiTimeRework
             {
                 if (baseGameManager == null)
                 {
+                    Object.Destroy(ComboLevels_Obj);
                     yield break;
                 }
                 float edit = math.sin(timer / 3f * math.PI);

@@ -1,5 +1,4 @@
 ﻿using MTM101BaldAPI.AssetTools;
-using MTM101BaldAPI.Reflection;
 using MTM101BaldAPI.UI;
 using System.Collections;
 using System.Collections.Generic;
@@ -853,7 +852,10 @@ namespace ItsBaldiTimeRework
             coreGameManager.disablePause = false;
 
             //BaldiTimeActions.Setup(baseGameManager);
-            BaldiTimeActions.PlaySpoopMusic();
+            if (Other.ShouldBTPlayMus(baseGameManager))
+            {
+                BaldiTimeActions.PlaySpoopMusic(baseGameManager);
+            }
 
             timer = 0f;
             while (timer < 0.5f)
@@ -877,12 +879,61 @@ namespace ItsBaldiTimeRework
         {
             BaseGameManagerPatches.musPlayer.Stop();
             Singleton<MusicManager>.Instance.StopMidi();
+            BaldiTimeActions.StopAllMusOnce();
             coreGameManager.GetCamera(0).SetControllable(false);
             coreGameManager.GetPlayer(0).plm.Entity.SetFrozen(true);
             coreGameManager.disablePause = true;
             baseGameManager.Ec.PauseEnvironment(true);
             AudioManager audMan = coreGameManager.audMan;
             AudioManager musicMan = coreGameManager.musicMan;
+
+            if (Other.CLC("skid.librarylib"))
+            {
+                if (BaldiTimeActions.ranks[BaldiTimeUI.numOld] == "D")
+                {
+                    LibrarylibAchievementsSupport.RewardAchievement("DRank");
+                }
+                if (BaldiTimeActions.ranks[BaldiTimeUI.numOld] == "S" && Singleton<CoreGameManager>.Instance.sceneObject.levelTitle != "F1")
+                {
+                    LibrarylibAchievementsSupport.RewardAchievement("SRank");
+                }
+                if (BaldiTimeActions.ranks[BaldiTimeUI.numOld] == "P" && Singleton<CoreGameManager>.Instance.sceneObject.levelTitle != "F1")
+                {
+                    LibrarylibAchievementsSupport.RewardAchievement("PRank");
+                }
+
+                for (int i = 1; i <= 4; i++)
+                {
+                    if (BaldiTimeActions.lap >= i)
+                    {
+                        LibrarylibAchievementsSupport.RewardAchievement("Lap" + i.ToString());
+                    }
+                }
+
+                if (Singleton<CoreGameManager>.Instance.sceneObject.levelTitle != "F1" && Singleton<CoreGameManager>.Instance.sceneObject.levelTitle != "F2")
+                {
+                    if (Other.CLC("il.modded.raldi.items") && (Other.CLC("il.modded.mrbeast") || Other.CLC("il.modded.polishcow") || Other.CLC("il.modded.present")))
+                    {
+                        LibrarylibAchievementsSupport.RewardAchievement("CrackTower");
+                    }
+                    if (Other.CLC("pixelguy.pixelmodding.baldiplus.bbextracontent"))
+                    {
+                        LibrarylibAchievementsSupport.RewardAchievement("OtherTower");
+                    }
+                    if (Other.CLC("skid.newhires"))
+                    {
+                        LibrarylibAchievementsSupport.RewardAchievement("HiresTower");
+                    }
+                    if (Other.CLC("charissa.rmscastinplus") || Other.CLC("char.rmscastinplus"))
+                    {
+                        LibrarylibAchievementsSupport.RewardAchievement("MusicTower");
+                    }
+                    if (Other.CLC("com.milk.item"))
+                    {
+                        LibrarylibAchievementsSupport.RewardAchievement("MilkTower");
+                    }
+                }
+            }
 
             Canvas RankCanvas = UIHelpers.CreateBlankUIScreen("Rank", true, true);
 

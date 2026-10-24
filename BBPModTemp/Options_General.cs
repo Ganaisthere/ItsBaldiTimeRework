@@ -40,6 +40,14 @@ namespace ItsBaldiTimeRework
                 Color.black);
             AddTooltip(CameraStyle, Other.GLT("Tip_CameraStyle"));
 
+            BasePlugin.ToggleBaldiFaceAfterImage = CreateToggle(
+                "ToggleBaldiFaceAfterImage",
+                Other.GLT("Opt_BaldiFaceEffects"),
+                BasePlugin.Instance.ConfigBaldiFaceAfterImage.Value,
+                new Vector3(130f, -40f, 0f),
+                360f);
+            AddTooltip(BasePlugin.ToggleBaldiFaceAfterImage, Other.GLT("Tip_BaldiFaceEffects"));
+
             Reflesh();
         }
 
