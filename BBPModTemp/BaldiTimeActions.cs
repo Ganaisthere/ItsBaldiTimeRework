@@ -2,6 +2,7 @@
 using MTM101BaldAPI.Reflection;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
 namespace ItsBaldiTimeRework
@@ -19,7 +20,7 @@ namespace ItsBaldiTimeRework
         public static float points = 0f;
         public static float comboPoints = 0f;
         public static float pointsForPRank = 0f;
-        public static List<string> ranks = new List<string> { "D", "C", "B", "A", "S", "P", "L", "X" };
+        public static List<string> ranks = new List<string>() { "D", "C", "B", "A", "S", "P", "L", "X" };
         public static string rank = "D";
         public static float combo = 0f;
         public static float comboTimer = 0f;
@@ -30,6 +31,9 @@ namespace ItsBaldiTimeRework
         public static float staminaOld = 100f;
         public static List<RoomController> secretRoomFound = new List<RoomController>();
         public static int secretRoomTotal = 0;
+        public static bool CanGetPRank => (lap >= 2) && comboKeep && (secretRoomFound.Count >= secretRoomTotal);
+        public static float warTimer = 0f;
+        public static bool war = false;
 
         public static void PlaySpoopMusic(BaseGameManager baseGameManager)
         {
@@ -160,7 +164,11 @@ namespace ItsBaldiTimeRework
                         if (combo % 5 == 0f && !idktoo)
                         {
                             idktoo = true;
-                            Singleton<CoreGameManager>.Instance.GetHud(0).StartCoroutine(BaldiTimeUI.ShowComboLevels(baseGameManager));
+                            if (Singleton<CoreGameManager>.Instance.GetHud(0).transform.TryFind("BaldiTimeHudManager", out Transform transform))
+                            {
+                                BaldiTimeHudManager manager = transform.gameObject.GetComponent<BaldiTimeHudManager>();
+                                manager.StartCoroutine(manager.ShowComboLevel());
+                            }
                         }
                         if (combo % 5 != 0f && idktoo)
                         {
@@ -191,15 +199,19 @@ namespace ItsBaldiTimeRework
         }
         public static void Setup(BaseGameManager baseGameManager)
         {
+            war = false;
             staminaOld = Singleton<CoreGameManager>.Instance.GetPlayer(0).plm.StaminaMax;
             points = 0f;
             comboPoints = 0f;
-            BaldiTimeUI.oldPoint = 0f;
             pointsForPRank = 0f;
             rank = "D";
             secretRoomTotal = 0;
             secretRoomFound.Clear();
             toppinsTotal = 0;
+            if (Singleton<CoreGameManager>.Instance.GetHud(0).transform.TryFind("BaldiTimeHudManager", out Transform transform))
+            {
+                transform.gameObject.GetComponent<BaldiTimeHudManager>().Initialize();
+            }
             List<RandomEvent> events = baseGameManager.Ec.ReflectionGetVariable("events") as List<RandomEvent>;
             foreach (RandomEvent randomEvent in events)
             {
@@ -325,18 +337,14 @@ namespace ItsBaldiTimeRework
         {
             lap = 0;
             pizzaTimer = 0f;
+            pizzaTimerTotal = 0f;
             itsBaldiTime = false;
             toppins.Clear();
             toppinsTotal = 0;
             combo = 0f;
             comboTimer = 10f;
-            BaldiTimeUI.pointsEdit = 0f;
-            BaldiTimeUI.ComboBarTimer = 0f;
-            BaldiTimeUI.ComboTimerEdit = 0f;
             comboKeep = true;
             enteringLap = false;
-            BaldiTimeUI.numOld = 0;
-            BaldiTimeUI.rankAniTimer = 0f;
             secretRoomTotal = 0;
             secretRoomFound.Clear();
         }
@@ -437,13 +445,26 @@ namespace ItsBaldiTimeRework
             {
                 pizzaTimerTotal = 0f;
                 itsBaldiTime = true;
-                Activity lastActivity = baseGameManager.ReflectionGetVariable("lastActivity") as Activity;
+                Activity closetActivity = null;
+                List<float> dists = new List<float>();
+                foreach (Activity activity1 in baseGameManager.Ec.activities)
+                {
+                    dists.Add(Vector3.Distance(activity1.transform.position, Singleton<CoreGameManager>.Instance.GetPlayer(0).transform.position));
+                }
+                for (int i = 0; i < dists.Count; i++)
+                {
+                    if (dists[i] == dists.Min())
+                    {
+                        closetActivity = baseGameManager.Ec.activities[i];
+                        break;
+                    }
+                }
                 foreach (Activity activity in baseGameManager.Ec.activities)
                 {
-                    if (activity != null && activity.room != null && activity != lastActivity)
+                    if (activity != null && activity.room != null && activity != closetActivity)
                     {
-                        //Mimicry Why You Didn't Write The MusicMachine's Code InstantReset() ?!?!?!?!
-                        if (activity != lastActivity && !activity.GetType().ToString().Contains("MusicMachine"))
+                        //Mimicry Why You Didn't Write The MusicMachine's Code InstantReset() From RMSInBBP ?!?!?!?!
+                        if (!activity.GetType().ToString().Contains("MusicMachine"))
                         {
                             activity.InstantReset();
                             baseGameManager.AddNotebookTotal(1);
@@ -488,7 +509,7 @@ namespace ItsBaldiTimeRework
                 {
                     if (activity != null && activity.room != null)
                     {
-                        //Mimicry Why You Didn't Write The MusicMachine's Code InstantReset() ?!?!?!?!
+                        //Mimicry Why You Didn't Write The MusicMachine's Code InstantReset() From RMSInBBP ?!?!?!?!
                         if (!activity.GetType().ToString().Contains("MusicMachine"))
                         {
                             activity.InstantReset();
@@ -513,6 +534,11 @@ namespace ItsBaldiTimeRework
                 if (Other.ShouldBTPlayMus(baseGameManager))
                 {
                     baseGameManager.StartCoroutine(StopAllMus(baseGameManager));
+                }
+                if (Singleton<CoreGameManager>.Instance.GetHud(0).transform.TryFind("BaldiTimeHudManager", out Transform transform))
+                {
+                    BaldiTimeHudManager manager = transform.gameObject.GetComponent<BaldiTimeHudManager>();
+                    manager.StartCoroutine(manager.TimerBarRaise());
                 }
             }
             if (Other.ShouldBTPlayMus(baseGameManager))
@@ -539,40 +565,24 @@ namespace ItsBaldiTimeRework
                         Singleton<CoreGameManager>.Instance.audMan.PlaySingle(BasePlugin.AssetMan.Get<SoundObject>("JOHN_PILLAR_IMPACT"));
                     }
                 }
-                else if (lap == 2)
+                else
                 {
-                    if (BasePlugin.AssetMan.Get<AudioClip>("Lap2-Intro") != null)
+                    AudioClip intro = BasePlugin.AssetMan.Get<AudioClip>("Lap" + lap.ToString() + "-Intro");
+                    AudioClip loop = BasePlugin.AssetMan.Get<AudioClip>("Lap" + lap.ToString() + "-Loop");
+                    if (intro != null)
                     {
-                        if (BasePlugin.AssetMan.Get<AudioClip>("Lap2-Loop") == null)
+                        if (intro == null)
                         {
-                            BaseGameManagerPatches.musPlayer.Play(BasePlugin.AssetMan.Get<AudioClip>("Lap2-Intro"), false, true);
+                            BaseGameManagerPatches.musPlayer.Play(intro, false, true);
                         }
                         else
                         {
-                            BaseGameManagerPatches.musPlayer.Queue(BasePlugin.AssetMan.Get<AudioClip>("Lap2-Intro"), BasePlugin.AssetMan.Get<AudioClip>("Lap2-Loop"), true);
+                            BaseGameManagerPatches.musPlayer.Queue(intro, loop, true);
                         }
                     }
                     else
                     {
-                        BaseGameManagerPatches.musPlayer.Play(BasePlugin.AssetMan.Get<AudioClip>("Lap2-Loop"), true, true);
-                    }
-                }
-                else if (lap == 3)
-                {
-                    if (BasePlugin.AssetMan.Get<AudioClip>("Lap3-Intro") != null)
-                    {
-                        if (BasePlugin.AssetMan.Get<AudioClip>("Lap3-Loop") == null)
-                        {
-                            BaseGameManagerPatches.musPlayer.Play(BasePlugin.AssetMan.Get<AudioClip>("Lap3-Intro"), false, true);
-                        }
-                        else
-                        {
-                            BaseGameManagerPatches.musPlayer.Queue(BasePlugin.AssetMan.Get<AudioClip>("Lap3-Intro"), BasePlugin.AssetMan.Get<AudioClip>("Lap3-Loop"), true);
-                        }
-                    }
-                    else
-                    {
-                        BaseGameManagerPatches.musPlayer.Play(BasePlugin.AssetMan.Get<AudioClip>("Lap3-Loop"), true, true);
+                        BaseGameManagerPatches.musPlayer.Play(loop, true, true);
                     }
                 }
             }
@@ -585,7 +595,16 @@ namespace ItsBaldiTimeRework
             {
                 pizzaTimer = 0f;
             }
-            baseGameManager.StartCoroutine(BaldiTimeUI.LappingAnimations(baseGameManager));
+            if (lap == 4)
+            {
+                IntVector2 pos = baseGameManager.Ec.GetBaldi() == null ? baseGameManager.Ec.RandomCell(false, false, true).position : baseGameManager.Ec.CellFromPosition(baseGameManager.Ec.GetBaldi().transform.position).position;
+                baseGameManager.Ec.SpawnNPC(BasePlugin.AssetMan.Get<FileName2>("FileName2"), pos);
+                Singleton<CoreGameManager>.Instance.audMan.PlaySingle(BasePlugin.AssetMan.Get<SoundObject>("Null_PreBoss_Start"));
+                AddWarTimer(30f, false);
+            }
+
+            Singleton<CoreGameManager>.Instance.GetHud(0).StartCoroutine(BaldiTimeUI.LappingAnimations(baseGameManager));
+
             PlayerMovementStatModifier statModifier = Singleton<CoreGameManager>.Instance.GetPlayer(0).GetMovementStatModifier();
             statModifier.AddModifier("walkSpeed", new MTM101BaldAPI.Components.ValueModifier(1f, 2f));
             statModifier.AddModifier("runSpeed", new MTM101BaldAPI.Components.ValueModifier(1f, 2.5f));
@@ -602,7 +621,7 @@ namespace ItsBaldiTimeRework
                 }
                 if (timer < 1f)
                 {
-                    timer += Time.deltaTime;
+                    timer += Time.deltaTime * baseGameManager.Ec.EnvironmentTimeScale;
                 }
                 else
                 {
@@ -657,7 +676,11 @@ namespace ItsBaldiTimeRework
             baseGameManager.Ec.CloseSchool();
             Object.FindObjectOfType<TimeOut>().Begin();*/
 
-            Singleton<CoreGameManager>.Instance.GetHud(0).StartCoroutine(BaldiTimeUI.TimerBarGoDown(baseGameManager));
+            if (Singleton<CoreGameManager>.Instance.GetHud(0).transform.TryFind("BaldiTimeHudManager", out Transform transform))
+            {
+                BaldiTimeHudManager manager = transform.gameObject.GetComponent<BaldiTimeHudManager>();
+                manager.StartCoroutine(manager.TimerBarFall());
+            }
 
             foreach (NPC npc in baseGameManager.Ec.Npcs)
             {
@@ -667,6 +690,7 @@ namespace ItsBaldiTimeRework
                 }
             }
             baseGameManager.Ec.SpawnNPC(BasePlugin.AssetMan.Get<BaldiFace>("BaldiFace"), baseGameManager.Ec.CellFromPosition(Singleton<CoreGameManager>.Instance.GetPlayer(0).transform.position).position);
+
             yield break;
         }
 
@@ -703,6 +727,73 @@ namespace ItsBaldiTimeRework
                 }
                 staminaOld = Singleton<CoreGameManager>.Instance.GetPlayer(0).plm.stamina;
             }
+        }
+
+        public static void AddWarTimer(float time = 30f, bool sound = true)
+        {
+            warTimer += time;
+            if (!war)
+            {
+                Singleton<BaseGameManager>.Instance.StartCoroutine(WarStuffs(Singleton<BaseGameManager>.Instance));
+                if (Singleton<CoreGameManager>.Instance.GetHud(0).transform.TryFind("BaldiTimeHudManager", out Transform transform))
+                {
+                    BaldiTimeHudManager manager = transform.gameObject.GetComponent<BaldiTimeHudManager>();
+                    manager.StartCoroutine(manager.WarTimerRaise());
+                }
+            }
+            war = true;
+            if (sound)
+            {
+                Singleton<CoreGameManager>.Instance.audMan.PlaySingle(BasePlugin.AssetMan.Get<SoundObject>("WarTimerUp"));
+            }
+        }
+
+        public static IEnumerator WarStuffs(BaseGameManager baseGameManager)
+        {
+            float timer = 0f;
+            while (baseGameManager != null && warTimer > 0f)
+            {
+                timer += Time.deltaTime * baseGameManager.Ec.EnvironmentTimeScale;
+                if (timer > 8f)
+                {
+                    timer = timer % 8f;
+                }
+                float edit;
+                edit = timer / 4f;
+                if (timer > 4f)
+                {
+                    edit = (8f - timer) / 4f;
+                }
+                Color color = new Color(1f, edit, edit, 1f);
+                foreach (Cell cell in baseGameManager.Ec.lights)
+                {
+                    cell.lightColor = color;
+                    baseGameManager.Ec.UpdateLightingAtCell(cell);
+                }
+                Shader.SetGlobalColor("_SkyboxColor", color);
+
+                warTimer -= Time.deltaTime * baseGameManager.Ec.EnvironmentTimeScale;
+
+                yield return null;
+            }
+            Transform player = Singleton<CoreGameManager>.Instance.GetPlayer(0).transform;
+            if (baseGameManager.Ec.GetBaldi() != null)
+            {
+                baseGameManager.EndGame(player, baseGameManager.Ec.GetBaldi());
+            }
+            else if (baseGameManager.Ec.TryGetCharacter(out BaldiFace baldiFace))
+            {
+                Other.NpcKillPlayer(baldiFace);
+            }
+            else if (baseGameManager.Ec.TryGetCharacter(out FileName2 fileName2))
+            {
+                Other.NpcKillPlayer(fileName2);
+            }
+            else
+            {
+                Other.NpcKillPlayer(baseGameManager.Ec.Npcs[0]);
+            }
+            yield break;
         }
     }
 }

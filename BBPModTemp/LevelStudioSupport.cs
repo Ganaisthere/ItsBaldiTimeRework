@@ -15,6 +15,7 @@ namespace ItsBaldiTimeRework
             //EditorInterface.AddNPCVisual("LapPortal", BasePlugin.AssetMan.Get<NPC>("LapPortal"));
             EditorInterface.AddNPCVisual("Toppin", BasePlugin.AssetMan.Get<NPC>("Toppin"));
             EditorInterface.AddNPCVisual("BaldiFace", BasePlugin.AssetMan.Get<NPC>("BaldiFace"));
+            EditorInterface.AddNPCVisual("FileName2", BasePlugin.AssetMan.Get<NPC>("FileName2"));
 
             LevelStudioPlugin.Instance.selectableTextures.Add("SecretRoomTile_Ceil");
             LevelStudioPlugin.Instance.selectableTextures.Add("SecretRoomTile_Floor");
@@ -46,6 +47,7 @@ namespace ItsBaldiTimeRework
             //AddNpc("LapPortal", "npc_lapportal");
             AddNPC("Toppin", "npc_toppin");
             AddNPC("BaldiFace", "npc_baldiface");
+            AddNPC("FileName2", "npc_filename2");
 
             //Poster
             void AddNpcPoster(string npc)
@@ -55,6 +57,7 @@ namespace ItsBaldiTimeRework
             AddNpcPoster("LapPortal");
             AddNpcPoster("Toppin");
             AddNpcPoster("BaldiFace");
+            AddNpcPoster("FileName2");
 
             //Rooms
             void AddRoom(string room, string icon)

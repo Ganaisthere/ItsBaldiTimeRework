@@ -8,7 +8,6 @@ namespace ItsBaldiTimeRework
 {
     public class LapPortal : NPC
     {
-        public Sprite[] sprites = new Sprite[2];
         public override void Initialize()
         {
             base.Initialize();
@@ -38,7 +37,7 @@ namespace ItsBaldiTimeRework
         public override void Update()
         {
             base.Update();
-            if (BaldiTimeActions.lap > 0 && BaldiTimeActions.lap < 3 && BaldiTimeActions.itsBaldiTime && Singleton<BaseGameManager>.Instance.FoundNotebooks >= Singleton<BaseGameManager>.Instance.Ec.notebookTotal)
+            if (BaldiTimeActions.lap > 0 && BaldiTimeActions.lap < 4 && BaldiTimeActions.itsBaldiTime && Singleton<BaseGameManager>.Instance.FoundNotebooks >= Singleton<BaseGameManager>.Instance.Ec.notebookTotal)
             {
                 lapPortal.spriteRenderer[0].sprite = BasePlugin.AssetMan.Get<Sprite>("LapPortal_1");
             }
@@ -77,7 +76,7 @@ namespace ItsBaldiTimeRework
         public override void OnStateTriggerStay(Entity otherEntity, Collider other, bool validCollision)
         {
             base.OnStateTriggerStay(otherEntity, other, validCollision);
-            if (!validCollision || !other.CompareTag("Player") || BaldiTimeActions.enteringLap || !(BaldiTimeActions.lap > 0 && BaldiTimeActions.lap < 3 && BaldiTimeActions.itsBaldiTime && Singleton<BaseGameManager>.Instance.FoundNotebooks >= Singleton<BaseGameManager>.Instance.Ec.notebookTotal))
+            if (!validCollision || !other.CompareTag("Player") || BaldiTimeActions.enteringLap || !(BaldiTimeActions.lap > 0 && BaldiTimeActions.lap < 4 && BaldiTimeActions.itsBaldiTime && Singleton<BaseGameManager>.Instance.FoundNotebooks >= Singleton<BaseGameManager>.Instance.Ec.notebookTotal))
             {
                 return;
             }

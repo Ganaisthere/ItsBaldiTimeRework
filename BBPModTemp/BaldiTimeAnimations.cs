@@ -889,15 +889,15 @@ namespace ItsBaldiTimeRework
 
             if (Other.CLC("skid.librarylib"))
             {
-                if (BaldiTimeActions.ranks[BaldiTimeUI.numOld] == "D")
+                if (BaldiTimeActions.rank == "D")
                 {
                     LibrarylibAchievementsSupport.RewardAchievement("DRank");
                 }
-                if (BaldiTimeActions.ranks[BaldiTimeUI.numOld] == "S" && Singleton<CoreGameManager>.Instance.sceneObject.levelTitle != "F1")
+                if (BaldiTimeActions.rank == "S" && Singleton<CoreGameManager>.Instance.sceneObject.levelTitle != "F1")
                 {
                     LibrarylibAchievementsSupport.RewardAchievement("SRank");
                 }
-                if (BaldiTimeActions.ranks[BaldiTimeUI.numOld] == "P" && Singleton<CoreGameManager>.Instance.sceneObject.levelTitle != "F1")
+                if (BaldiTimeActions.rank == "P" && Singleton<CoreGameManager>.Instance.sceneObject.levelTitle != "F1")
                 {
                     LibrarylibAchievementsSupport.RewardAchievement("PRank");
                 }
@@ -969,7 +969,7 @@ namespace ItsBaldiTimeRework
             Student0.color = new Color(1f, 1f, 1f, 0f);
             Student0.sprite = BasePlugin.AssetMan.Get<Sprite>("RankAnime_Student_0");
 
-            musicMan.PlaySingle(BasePlugin.AssetMan.Get<SoundObject>("Rank_" + BaldiTimeActions.ranks[BaldiTimeUI.numOld]));
+            musicMan.PlaySingle(BasePlugin.AssetMan.Get<SoundObject>("Rank_" + BaldiTimeActions.rank));
 
 
             if (BaldiTimeActions.pizzaTimer <= 0f)
@@ -1052,7 +1052,7 @@ namespace ItsBaldiTimeRework
                 yield return null;
             }
 
-            Student0.sprite = BasePlugin.AssetMan.Get<Sprite>("RankAnime_Student_" + BaldiTimeActions.ranks[BaldiTimeUI.numOld]);
+            Student0.sprite = BasePlugin.AssetMan.Get<Sprite>("RankAnime_Student_" + BaldiTimeActions.rank);
 
             GameObject Rank_Obj = new GameObject("Rank");
             Rank_Obj.transform.SetParent(RankCanvas.transform, false);
@@ -1063,7 +1063,7 @@ namespace ItsBaldiTimeRework
             Rank.rectTransform.anchorMin = new Vector2(0f, 0f);
             Rank.rectTransform.anchorMax = new Vector2(1f, 1f);
             Rank.color = new Color(1f, 1f, 1f, 1f);
-            Rank.sprite = BasePlugin.AssetMan.Get<Sprite>("RankAnime_Rank_" + BaldiTimeActions.ranks[BaldiTimeUI.numOld]);
+            Rank.sprite = BasePlugin.AssetMan.Get<Sprite>("RankAnime_Rank_" + BaldiTimeActions.rank);
             Student0.transform.SetAsLastSibling();
 
             yield return new WaitForSecondsRealtime(5.5f);

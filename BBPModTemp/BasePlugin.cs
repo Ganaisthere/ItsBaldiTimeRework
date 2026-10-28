@@ -46,30 +46,38 @@ namespace ItsBaldiTimeRework
         {
             [JsonProperty("Name")]
             public string name;
-
             [JsonProperty("Description")]
             public string description;
-
             [JsonProperty("Author")]
             public string author;
 
             [JsonProperty("ReplaceSpoopMusic")]
             public bool replaceSpoopMusic;
-
             [JsonProperty("ReplaceTitleCard")]
             public bool replaceTitleCard;
-
             [JsonProperty("ReplaceComboLevels")]
             public bool replaceComboLevels;
+            [JsonProperty("ReplaceLapMusic")]
+            public bool replaceLapMusic;
+
+            [JsonProperty("ComboTextColor")]
+            public float[] comboTextColor;
+            [JsonProperty("ComboTextShadowColor")]
+            public float[] comboTextShadowColor;
 
             public PackMeta()
             {
                 name = "Unnamed Pack";
                 description = "No description added yet.";
                 author = "IDK";
+
                 replaceSpoopMusic = false;
                 replaceTitleCard = false;
                 replaceComboLevels = false;
+                replaceLapMusic = false;
+
+                comboTextColor = new float[4] { 11f, 45f, 14f, 1f };
+                comboTextShadowColor = new float[4] { 11f, 45f, 14f, 1f };
             }
         }
 
@@ -91,6 +99,24 @@ namespace ItsBaldiTimeRework
         public static Dictionary<string, PackMeta> AllPacks = new Dictionary<string, PackMeta>();
         public static List<string> AllPackStrings = new List<string>();
         public static List<string> LoadedPacks = new List<string>();
+        private static float[] ComboTextColor = new float[4] { 1f, 1f, 1f, 1f };
+        private static float[] ComboTextShadowColor = new float[4] { 1f, 1f, 1f, 1f };
+        public static Color GetComboTextColor()
+        {
+            if (ComboTextColor.Length == 4)
+            {
+                return new Color(ComboTextColor[0], ComboTextColor[1], ComboTextColor[2], ComboTextColor[3]);
+            }
+            return Color.white;
+        }
+        public static Color GetComboTextShadowColor()
+        {
+            if (ComboTextShadowColor.Length == 4)
+            {
+                return new Color(ComboTextShadowColor[0], ComboTextShadowColor[1], ComboTextShadowColor[2], ComboTextShadowColor[3]);
+            }
+            return Color.black;
+        }
         //---------------------------------------------------------------------
         public ConfigEntry<bool> ConfigShowToppins;
         public ConfigEntry<bool> ConfigLapPortalPositions;
@@ -104,19 +130,14 @@ namespace ItsBaldiTimeRework
         //---------------------------------------------------------------------
         public static MenuToggle ToggleBaldiFaceAfterImage;
         //----------------------------------------------------------------------
-        public static bool IsRaldiTweaksInstalled = false;
-        public static bool IsNullscapeinBBInstalled = false;
+        public static bool IsRaldiTweaksInstalled => Chainloader.PluginInfos.ContainsKey("il.modded.raldi.tweaks");
+        public static bool IsNullscapeinBBInstalled => Chainloader.PluginInfos.ContainsKey("Nil.NullscapeinBB");
         //----------------------------------------------------------------------
         public static RoomCategory SRCategory = EnumExtensions.ExtendEnum<RoomCategory>("BT_SecretRoom");
         public static List<WeightedRoomAsset> WeightedSecretRoomAssets = new List<WeightedRoomAsset>();
         //----------------------------------------------------------------------
         public void Update()
         {
-            IsNullscapeinBBInstalled = Chainloader.PluginInfos.ContainsKey("Nil.NullscapeinBB");
-            IsRaldiTweaksInstalled = Chainloader.PluginInfos.ContainsKey("il.modded.raldi.tweaks");
-
-            //-----------------------------------------------------------------
-
             if (ToggleBaldiFaceAfterImage != null)
             {
                 if (ToggleBaldiFaceAfterImage.gameObject != null)
@@ -192,7 +213,7 @@ Beat - The camera will sway rhythmically from side to side."
                 "Debug",
                 "Remove All BaldiTime Achievements",
                 false,
-                "If true, the mod will try clear all achievements added by this mod when you open the game (if Librarylib is installed), and reset this configuration option to false."
+                "If true, the mod will try clear all achievements added by this mod when you open the game (if Librarylib is installed), Then reset this configuration option to false."
             );
 
             Instance = this;
@@ -303,6 +324,69 @@ Beat - The camera will sway rhythmically from side to side."
             }
             File.WriteAllLines(saveFilePath, LoadedPacks);
 
+            ComboTextColor = new float[4] { 1f, 1f, 1f, 1f };
+            for (int i = LoadedPacks.Count - 1; i >= 0; i--)
+            {
+                string loadedPack = LoadedPacks[i];
+                float[] comboTextColor = AllPacks[loadedPack].comboTextColor;
+
+                Log(loadedPack);
+
+                if (comboTextColor.Length == 4)
+                {
+                    if (comboTextColor[0] == 11 && comboTextColor[1] == 45 && comboTextColor[2] == 14)
+                    {
+                        Log("This Pack's Hasn't \"ComboTextColor\"! - " + loadedPack, 1);
+                    }
+                    else
+                    {
+                        ComboTextColor = comboTextColor;
+
+                        string color = comboTextColor[0].ToString() + ", ";
+                        color += comboTextColor[1].ToString() + ", ";
+                        color += comboTextColor[2].ToString() + ", ";
+                        color += comboTextColor[3].ToString();
+                        Log("\"ComboTextColor\" Is Overrided By This Pack: " + loadedPack + ", Color: (" + color + ")", 1);
+
+                        break;
+                    }
+                }
+                else
+                {
+                    Log("This Pack's \"ComboTextColor\" Format Is Wrong! - " + loadedPack, 2);
+                }
+            }
+
+            ComboTextShadowColor = new float[4] { 1f, 1f, 1f, 1f };
+            for (int i = LoadedPacks.Count - 1; i >= 0; i--)
+            {
+                string loadedPack = LoadedPacks[i];
+                float[] comboTextShadowColor = AllPacks[loadedPack].comboTextShadowColor;
+                if (comboTextShadowColor.Length == 4)
+                {
+                    if (comboTextShadowColor[0] == 11 && comboTextShadowColor[1] == 45 && comboTextShadowColor[2] == 14)
+                    {
+                        Log("This Pack's Hasn't \"ComboTextShadowColor\"! - " + loadedPack, 1);
+                    }
+                    else
+                    {
+                        ComboTextShadowColor = comboTextShadowColor;
+
+                        string color = comboTextShadowColor[0].ToString() + ", ";
+                        color += comboTextShadowColor[1].ToString() + ", ";
+                        color += comboTextShadowColor[2].ToString() + ", ";
+                        color += comboTextShadowColor[3].ToString();
+                        Log("\"ComboTextShadowColor\" Is Overrided By This Pack: " + loadedPack + ", Color: (" + color + ")", 1);
+
+                        break;
+                    }
+                }
+                else
+                {
+                    Log("This Pack's \"ComboTextShadowColor\" Format Is Wrong! - " + loadedPack, 2);
+                }
+            }
+
             // AudioClips/Laps
             AddLapMusics();
             // AudioClips/Misc
@@ -312,7 +396,6 @@ Beat - The camera will sway rhythmically from side to side."
             AddSpoopMusics();
 
             // SoundObjects/Effects
-            AddSoundObject("BaldiFaceLaugh.ogg", "SoundObjects/Effects");
             AddSoundObject("bellcollectsmall.ogg", "SoundObjects/Effects");
             AddSoundObject("comboup1.ogg", "SoundObjects/Effects");
             AddSoundObject("comboup2.ogg", "SoundObjects/Effects");
@@ -330,7 +413,7 @@ Beat - The camera will sway rhythmically from side to side."
             AddSoundObject("rankup4.ogg", "SoundObjects/Effects");
             AddSoundObject("rankup5.ogg", "SoundObjects/Effects");
             AddSoundObject("sfx_collecttoppin.ogg", "SoundObjects/Effects");
-            AddSoundObject("sfx_collectgiantpizza.ogg", "SoundObjects/Effects");
+            AddSoundObject("sfx_secretfound.ogg", "SoundObjects/Effects");
             AddSoundObject("sfx_explosion.ogg", "SoundObjects/Effects");
             AddSoundObject("Explosion.wav", "SoundObjects/Effects");
             AddSoundObject("sfx_lapenter.ogg", "SoundObjects/Effects");
@@ -338,6 +421,7 @@ Beat - The camera will sway rhythmically from side to side."
             AddSoundObject("sfx_taunt.ogg", "SoundObjects/Effects");
             AddSoundObject("sfx_parry.ogg", "SoundObjects/Effects");
             AddSoundObject("sfx_comboend.ogg", "SoundObjects/Effects");
+            AddSoundObject("WarTimerUp.ogg", "SoundObjects/Effects");
             // SoundObjects/Effects/Rank
             AddSoundObject("Rank_D.ogg", "SoundObjects/Effects/Rank");
             AddSoundObject("Rank_C.ogg", "SoundObjects/Effects/Rank");
@@ -346,6 +430,9 @@ Beat - The camera will sway rhythmically from side to side."
             AddSoundObject("Rank_S.ogg", "SoundObjects/Effects/Rank");
             AddSoundObject("Rank_P.ogg", "SoundObjects/Effects/Rank");
             AddSoundObject("Rank_L.ogg", "SoundObjects/Effects/Rank");
+            // SoundObjects/Voice
+            AddSoundObject("BaldiFaceLaugh.ogg", "SoundObjects/Voice", "Nothing", SoundType.Voice);
+            AddSoundObject("Null_PreBoss_Start.ogg", "SoundObjects/Voice", "Vfx_Null_PreBoss_Start", SoundType.Voice, -1f);
 
             // Textures/Entity
             AddTexture2D("BaldiFace.png", "Textures/Entity", new Vector2(0.5f, 0.4f), 8f);
@@ -364,6 +451,7 @@ Beat - The camera will sway rhythmically from side to side."
             AddTexture2D("Toppins_4_Idle.png", "Textures/Entity", new Vector2(0.5f, 0.6f));
             AddTexture2D("Toppins_4_Yay.png", "Textures/Entity", new Vector2(0.5f, 0.6f));
             AddTexture2D("ToppinsCage.png", "Textures/Entity", new Vector2(0.5f, 0.45f), 10f);
+            AddTexture2D("Filename2.png", "Textures/Entity", new Vector2(0.5f, 0.4f), 64f);
             // Textures/GUI
             AddTexture2D("BaldiTimeLogo_0.png", "Textures/GUI", true);
             AddTexture2D("BaldiTimeLogo_1.png", "Textures/GUI", true);
@@ -375,11 +463,16 @@ Beat - The camera will sway rhythmically from side to side."
             AddTexture2D("TimerBar_1.png", "Textures/GUI", true);
             AddTexture2D("TimerBar_2.png", "Textures/GUI", true);
             AddTexture2D("TimerBar_3.png", "Textures/GUI", true);
+            AddTexture2D("TimerBar_4.png", "Textures/GUI", true);
+            AddTexture2D("TimerBar_5.png", "Textures/GUI", true);
+            AddTexture2D("WarTimer_0.png", "Textures/GUI", true);
+            AddTexture2D("WarTimer_1.png", "Textures/GUI", true);
             // Textures/GUI/ComboLevels
             AddComboLevels();
             // Textures/GUI/LapFlags
             AddTexture2D("Lap2Flag.png", "Textures/GUI/LapFlags", true);
             AddTexture2D("Lap3Flag.png", "Textures/GUI/LapFlags", true);
+            AddTexture2D("Lap4Flag.png", "Textures/GUI/LapFlags", true);
             // Textures/GUI/RankDisplay
             AddTexture2D("Rank_D_0.png", "Textures/GUI/RankDisplay", true);
             AddTexture2D("Rank_D_1.png", "Textures/GUI/RankDisplay", true);
@@ -421,8 +514,6 @@ Beat - The camera will sway rhythmically from side to side."
             AddTexture2D("RankAnime_BaldiFace.png", "Textures/Misc/RankAnime", true);
             // Textures/Misc/TitleCard
             AddTitleCardStuffs();
-
-            BaldiTimeUI.RankDSprite = AssetMan.Get<Sprite>("Rank_D_0");
         }
 
         private IEnumerator LoadAssets()
@@ -527,9 +618,7 @@ Beat - The camera will sway rhythmically from side to side."
                 .SetAirborne()
                 .SetPoster(PosterTexture, "PST_PRI_LapPortal1", "PST_PRI_LapPortal2")
                 .Build();
-            lapPortal.sprites[0] = AssetMan.Get<Sprite>("LapPortal_0");
-            lapPortal.sprites[1] = AssetMan.Get<Sprite>("LapPortal_1");
-            lapPortal.spriteRenderer[0].sprite = lapPortal.sprites[0];
+            lapPortal.spriteRenderer[0].sprite = AssetMan.Get<Sprite>("LapPortal_0");
             AssetMan.Add("LapPortal", lapPortal);
             LevelLoaderPlugin.Instance.npcAliases.Add("LapPortal", lapPortal);
             poster = lapPortal.Poster;
@@ -560,6 +649,31 @@ Beat - The camera will sway rhythmically from side to side."
             AssetMan.Add("BaldiFace", baldiFace);
             LevelLoaderPlugin.Instance.npcAliases.Add("BaldiFace", baldiFace);
             poster = baldiFace.Poster;
+            LevelLoaderPlugin.Instance.posterAliases.Add(poster.baseTexture.name, poster);
+
+            PosterTexture = AddTexture2DInCore("pri_filename2.png", false, "Posters");
+            FileName2 fileName2 = new NPCBuilder<FileName2>(Info)
+                .SetName("FileName2")
+                .SetEnum("FileName2")
+                .IgnorePlayerOnSpawn()
+                .SetAudioTimescaleType(TimeScaleType.Npc)
+                .SetMetaTags(new string[]
+                    {
+                        "npp_noloot",
+                        "no_balloon_frenzy",
+                        "custom_mode_force_npc_in_list",
+                        "nhp_items_ignoreherring",
+                        "nhp_events_canteat"
+                    })
+                .AddMetaFlag(NPCFlags.StandardNoCollide | NPCFlags.NonStandardSpawn)
+                .AddLooker()
+                .SetWanderEnterRooms()
+                .SetPoster(PosterTexture, "PST_PRI_FileName2-1", "PST_PRI_FileName2-2")
+                .Build();
+            fileName2.spriteRenderer[0].sprite = AssetMan.Get<Sprite>("FileName2");
+            AssetMan.Add("FileName2", fileName2);
+            LevelLoaderPlugin.Instance.npcAliases.Add("FileName2", fileName2);
+            poster = fileName2.Poster;
             LevelLoaderPlugin.Instance.posterAliases.Add(poster.baseTexture.name, poster);
 
             yield return "Adding Rooms...";
@@ -625,6 +739,7 @@ Beat - The camera will sway rhythmically from side to side."
                 AddTexture2DInCore("npc_lapportal.png", true, "EditorUI");
                 AddTexture2DInCore("npc_toppin.png", true, "EditorUI");
                 AddTexture2DInCore("npc_baldiface.png", true, "EditorUI");
+                AddTexture2DInCore("npc_filename2.png", true, "EditorUI");
 
                 LevelStudioSupport.Setup();
             }
@@ -917,72 +1032,43 @@ Beat - The camera will sway rhythmically from side to side."
         internal void AddLapMusics()
         {
             string chlidPath = "AudioClips/Laps";
-            string fileNameWithExtension = "Lap1-Loop.ogg";
-            string selectedPack = null;
+            int basePackInt = 0;
 
             for (int i = LoadedPacks.Count - 1; i >= 0; i--)
             {
                 string pack = LoadedPacks[i];
-                string file = Path.Combine(AssetLoader.GetModPath(this), "ResourcePacks", pack, chlidPath, fileNameWithExtension);
-                if (File.Exists(file))
+                if (AllPacks[pack].replaceLapMusic)
                 {
-                    selectedPack = pack;
+                    basePackInt = i;
                     break;
                 }
             }
-            if (selectedPack == null)
+            void AddMusic(string fullName)
             {
-                Log("Can't load Lap1 musics, Because not every files are exists (Must has Lap1-Loop.ogg).", 2);
-            }
-            else
-            {
-                AddAudioClip("Lap1-Intro.ogg", "AudioClips/Laps", selectedPack);
-                AddAudioClip("Lap1-Loop.ogg", "AudioClips/Laps", selectedPack);
-                AddAudioClip("Lap1-Outro.ogg", "AudioClips/Laps", selectedPack);
+                for (int i = LoadedPacks.Count - 1; i >= basePackInt; i--)
+                {
+                    string pack = LoadedPacks[i];
+                    string packPath = Path.Combine(AssetLoader.GetModPath(this), "ResourcePacks", pack, chlidPath, fullName);
+                    if (File.Exists(packPath))
+                    {
+                        AudioClip audio = AssetLoader.AudioClipFromFile(packPath);
+                        audio.name = Path.GetFileNameWithoutExtension(packPath);
+                        AssetMan.Add(audio.name, audio);
+                        break;
+                    }
+                }
+                Log("Couldn't Find " + fullName, 1);
             }
 
-            fileNameWithExtension = "Lap2-Loop.ogg";
-            selectedPack = null;
-            for (int i = LoadedPacks.Count - 1; i >= 0; i--)
-            {
-                string pack = LoadedPacks[i];
-                string file = Path.Combine(AssetLoader.GetModPath(this), "ResourcePacks", pack, chlidPath, fileNameWithExtension);
-                if (File.Exists(file))
-                {
-                    selectedPack = pack;
-                    break;
-                }
-            }
-            if (selectedPack == null)
-            {
-                Log("Can't load Lap2 musics, Because not every files are exists (Must has Lap2-Loop.ogg).", 2);
-            }
-            else
-            {
-                AddAudioClip("Lap2-Intro.ogg", "AudioClips/Laps", selectedPack);
-                AddAudioClip("Lap2-Loop.ogg", "AudioClips/Laps", selectedPack);
-            }
+            AddMusic("Lap1-Intro.ogg");
+            AddMusic("Lap1-Loop.ogg");
+            AddMusic("Lap1-Outro.ogg");
 
-            fileNameWithExtension = "Lap3-Loop.ogg";
-            selectedPack = null;
-            for (int i = LoadedPacks.Count - 1; i >= 0; i--)
+            for (int i = 2; i <= 4; i++)
             {
-                string pack = LoadedPacks[i];
-                string file = Path.Combine(AssetLoader.GetModPath(this), "ResourcePacks", pack, chlidPath, fileNameWithExtension);
-                if (File.Exists(file))
-                {
-                    selectedPack = pack;
-                    break;
-                }
-            }
-            if (selectedPack == null)
-            {
-                Log("Can't load Lap3 musics, Because not every files are exists (Must has Lap3-Loop.ogg).", 2);
-            }
-            else
-            {
-                AddAudioClip("Lap3-Intro.ogg", "AudioClips/Laps", selectedPack);
-                AddAudioClip("Lap3-Loop.ogg", "AudioClips/Laps", selectedPack);
+                string name = "Lap" + i.ToString();
+                AddMusic(name + "-Intro.ogg");
+                AddMusic(name + "-Loop.ogg");
             }
         }
         internal void AddTexture2D(string fileNameWithExtension, string chlidPath, bool btwSprite = false, float pixelsPerUnit = 50f)
@@ -992,9 +1078,6 @@ Beat - The camera will sway rhythmically from side to side."
             {
                 string pack = LoadedPacks[i];
                 string file = Path.Combine(AssetLoader.GetModPath(this), "ResourcePacks", pack, chlidPath, fileNameWithExtension);
-
-                //Log("Adding: " + Path.GetFileName(file));
-                //Log(file);
 
                 if (File.Exists(file))
                 {

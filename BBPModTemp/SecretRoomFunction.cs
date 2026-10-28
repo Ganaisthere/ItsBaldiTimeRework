@@ -1,4 +1,6 @@
-﻿namespace ItsBaldiTimeRework
+﻿using UnityEngine;
+
+namespace ItsBaldiTimeRework
 {
     public class SecretRoomFunction : RoomFunction
     {
@@ -19,7 +21,11 @@
             if (!BaldiTimeActions.secretRoomFound.Contains(room))
             {
                 BaldiTimeActions.secretRoomFound.Add(room);
-                Singleton<CoreGameManager>.Instance.audMan.PlaySingle(BasePlugin.AssetMan.Get<SoundObject>("sfx_collecttoppin"));
+                if (Singleton<CoreGameManager>.Instance.GetHud(0).transform.TryFind("BaldiTimeHudManager", out Transform transform))
+                {
+                    BaldiTimeHudManager manager = transform.gameObject.GetComponent<BaldiTimeHudManager>();
+                    manager.StartCoroutine(manager.YouFoundSecret());
+                }
             }
             if (Other.CLC("skid.librarylib") && BaldiTimeActions.secretRoomFound.Count >= BaldiTimeActions.secretRoomTotal)
             {

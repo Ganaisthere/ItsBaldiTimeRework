@@ -1,5 +1,8 @@
 ﻿using HarmonyLib;
+using MTM101BaldAPI.AssetTools;
 using MTM101BaldAPI.Reflection;
+using MTM101BaldAPI.Registers;
+using System.Collections;
 using Unity.Mathematics;
 using UnityEngine;
 
@@ -71,6 +74,10 @@ namespace ItsBaldiTimeRework
             {
                 BaldiTimeActions.points += 475f * count;
                 BaldiTimeActions.AddCombo(1f * count);
+                if (BaldiTimeActions.war)
+                {
+                    BaldiTimeActions.AddWarTimer(15f);
+                }
             }
         }
 
@@ -82,6 +89,17 @@ namespace ItsBaldiTimeRework
             {
                 BaldiTimeActions.points += 225f;
                 BaldiTimeActions.AddCombo(0f);
+            }
+            if (BaldiTimeActions.war)
+            {
+                if (correct)
+                {
+                    BaldiTimeActions.AddWarTimer(25f);
+                }
+                else
+                {
+                    BaldiTimeActions.AddWarTimer(15f);
+                }
             }
         }
 
@@ -189,9 +207,13 @@ namespace ItsBaldiTimeRework
         {
             if (Other.ShouldBT(Singleton<BaseGameManager>.Instance, false))
             {
-                BaldiTimeUI.SetupGUI(__instance);
+                GameObject BTHudManager_Obj = new GameObject("BaldiTimeHudManager");
+                BTHudManager_Obj.transform.SetParent(__instance.transform);
+                BaldiTimeHudManager BTHudManager = BTHudManager_Obj.AddComponent<BaldiTimeHudManager>();
+                BTHudManager.Initialize();
+
+                //BaldiTimeUI.SetupGUI(__instance);
             }
-            BaldiTimeUI.camTimer = 0f;
         }
 
         [HarmonyPatch("Update")]
@@ -204,7 +226,7 @@ namespace ItsBaldiTimeRework
             }
             if (Other.ShouldBT(Singleton<BaseGameManager>.Instance))
             {
-                BaldiTimeUI.UpdateGUI(__instance);
+                //BaldiTimeUI.UpdateGUI(__instance);
             }
         }
     }
@@ -251,23 +273,6 @@ namespace ItsBaldiTimeRework
         [HarmonyPrefix]
         public static void StartGamePrefix()
         {
-            if (BaldiTimeUI.TimerBar != null)
-            {
-                BaldiTimeUI.TimerBar.rectTransform.anchoredPosition = new Vector2(0f, -38f);
-                if (Other.ShouldBT(Singleton<BaseGameManager>.Instance))
-                {
-                    BaldiTimeUI.PointDisplay.rectTransform.localScale = Vector3.one;
-                    BaldiTimeUI.ComboBar.rectTransform.localScale = Vector3.one;
-                    BaldiTimeUI.RankImage.sprite = BaldiTimeUI.RankDSprite;
-                    BaldiTimeUI.RankOverlay.sprite = BaldiTimeUI.RankDSprite;
-                    BaldiTimeUI.RankOverlay.rectTransform.anchoredPosition = new Vector2(0f, 48f);
-                }
-                else
-                {
-                    BaldiTimeUI.PointDisplay.rectTransform.localScale = Vector3.zero;
-                    BaldiTimeUI.ComboBar.rectTransform.localScale = Vector3.zero;
-                }
-            }
             BaldiTimeActions.itsBaldiTime = false;
         }
 
@@ -282,6 +287,11 @@ namespace ItsBaldiTimeRework
             {
                 baseGameManager.StartCoroutine(BaldiTimeAnimations.TitleCard(Singleton<CoreGameManager>.Instance, baseGameManager));
             }
+            if (Singleton<CoreGameManager>.Instance.GetHud(0).transform.TryFind("BaldiTimeHudManager", out Transform transform))
+            {
+                BaldiTimeHudManager manager = transform.gameObject.GetComponent<BaldiTimeHudManager>();
+                manager.Initialize();
+            }
         }
 
         [HarmonyPatch("Start")]
@@ -295,10 +305,7 @@ namespace ItsBaldiTimeRework
                     BaseGameManagerPatches.musPlayer.Stop();
                 }
             }
-            if (BaldiTimeUI.PointDisplay != null)
-            {
-                BaldiTimeUI.PointDisplayText.text = "0";
-            }
+            BaldiTimeActions.Reset();
         }
 
         [HarmonyPatch("Start")]
@@ -349,30 +356,93 @@ namespace ItsBaldiTimeRework
         }
     }
 
-    /*[HarmonyPatch(typeof(HappyBaldi))]
-    public class HappyBaldiPatches
+    [HarmonyPatch(typeof(ArtsAndCrafters_Stalking), "InPlayerSight")]
+    public class ArtsAndCrafters_StalkingPatches
     {
-        [HarmonyPatch("Activate")]
         [HarmonyPrefix]
-        public static bool Prefix(HappyBaldi __instance)
+        public static bool InPlayerSightPrefix(PlayerManager player, ArtsAndCrafters_Stalking __instance)
         {
             if (Other.ShouldBT(Singleton<BaseGameManager>.Instance))
             {
+                ArtsAndCrafters crafters = __instance.ReflectionGetVariable("crafters") as ArtsAndCrafters;
+                float timeInPlayerSight = (float)__instance.ReflectionGetVariable("timeInPlayerSight");
+
+                if (!player.Tagged)
+                {
+                    timeInPlayerSight += Time.deltaTime * crafters.TimeScale;
+                    __instance.ReflectionSetVariable("timeInPlayerSight", timeInPlayerSight);
+                    if (timeInPlayerSight >= crafters.AngryTime)
+                    {
+                        crafters.GetAngry(player);
+                    }
+                }
                 return false;
             }
             return true;
         }
+    }
 
-        [HarmonyPatch("Activate")]
-        [HarmonyPostfix]
-        public static void Postfix(HappyBaldi __instance)
+    [HarmonyPatch(typeof(ArtsAndCrafters_Teleporting), "Enter")]
+    public class ArtsAndCrafters_TeleportingPatches
+    {
+        [HarmonyPrefix]
+        public static void EnterPrefix(ArtsAndCrafters_Teleporting __instance)
         {
-            if (Other.ShouldBT(Singleton<BaseGameManager>.Instance))
+            BaldiTimeActions.points -= 250f;
+            if (BaldiTimeActions.points < 0f)
             {
-                Object.Destroy(__instance.gameObject);
+                BaldiTimeActions.points = 0f;
+            }
+            BaldiTimeActions.AddCombo(0f, -3f);
+
+            ArtsAndCrafters crafters = __instance.ReflectionGetVariable("crafters") as ArtsAndCrafters;
+            IEnumerator enumerator(ArtsAndCrafters crafters1)
+            {
+                float timer = 0f;
+                while (timer < crafters1.AttackTime - 0.5f)
+                {
+                    if (crafters1 == null || crafters1.ec == null)
+                    {
+                        yield break;
+                    }
+                    timer += Time.deltaTime * crafters1.TimeScale;
+                    yield return null;
+                }
+                crafters1.ec.SpawnNPC(NPCMetaStorage.Instance.Find(x => x.character == Character.Crafters).value, crafters1.ec.RandomCell(false, false, true).position);
+                yield break;
+            }
+
+            crafters.StartCoroutine(enumerator(crafters));
+        }
+    }
+
+    [HarmonyPatch(typeof(ArtsAndCrafters), "Initialize")]
+    public class ArtsAndCraftersPatches
+    {
+        [HarmonyPostfix]
+        public static void InitializePostfix(ArtsAndCrafters __instance)
+        {
+            __instance.spriteRenderer[0].sprite = AssetFinder.FindOfTypeWithName<Sprite>("CraftersSprites_0", true);
+            Transform[] echo = __instance.ReflectionGetVariable("echo") as Transform[];
+            foreach (var i in echo)
+            {
+                if (i.gameObject != null)
+                {
+                    i.gameObject.SetActive(false);
+                }
+            }
+            AudioManager audMan = __instance.ReflectionGetVariable("audMan") as AudioManager;
+            if (audMan != null)
+            {
+                audMan.FlushQueue(true);
+            }
+            AudioManager attackAudMan = __instance.ReflectionGetVariable("attackAudMan") as AudioManager;
+            if (attackAudMan != null)
+            {
+                attackAudMan.FlushQueue(true);
             }
         }
-    }*/
+    }
 
     [HarmonyPatch(typeof(ItemManager))]
     public class ItemManagerPatches

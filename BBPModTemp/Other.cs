@@ -17,6 +17,31 @@ namespace ItsBaldiTimeRework
             return roomFunctionContainer.ReflectionGetVariable("functions") as List<RoomFunction>;
         }
 
+        public static bool TryFind(this Transform transform0, string n, out Transform transform1)
+        {
+            bool success = false;
+            transform1 = transform0.Find(n);
+            if (transform1 != null)
+            {
+                success = true;
+            }
+            return success;
+        }
+
+        public static bool TryGetCharacter<T>(this EnvironmentController ec, out T c)
+        {
+            c = default(T);
+            foreach (NPC npc in ec.Npcs)
+            {
+                if (npc.TryGetComponent(out T component))
+                {
+                    c = component;
+                    return true;
+                }
+            }
+            return false;
+        }
+
         public static bool AnykeyDown()
         {
             return Input.anyKeyDown || Singleton<InputManager>.Instance.GetDigitalInput("MouseSubmit", onDown: true) || Singleton<InputManager>.Instance.GetDigitalInput("Pause", onDown: true) || Singleton<InputManager>.Instance.AnyButton(onDown: true);

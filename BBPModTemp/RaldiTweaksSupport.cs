@@ -2,24 +2,20 @@
 using MTM101BaldAPI;
 using RaldiTweaks.Patches;
 using RaldiTweaks.PlayerModel;
+using UnityEngine;
 
 namespace ItsBaldiTimeRework
 {
     [ConditionalPatchMod("il.modded.raldi.tweaks")]
     public class RaldiTweaksSupport
     {
-        public static void ChangeColor()
+        public static Color GetShirtColor()
         {
-            if (BaldiTimeUI.ComboBar.gameObject == null)
-            {
-                return;
-            }
             if (Singleton<PlayerModel_Manager>.Instance == null)
             {
-                return;
+                return Color.green;
             }
-            BaldiTimeUI.ComboBarOverlay.color = Singleton<PlayerModel_Manager>.Instance.ShirtColor;
-            BaldiTimeUI.TimerBarOverlay.color = Singleton<PlayerModel_Manager>.Instance.ShirtColor;
+            return Singleton<PlayerModel_Manager>.Instance.ShirtColor;
         }
     }
 
