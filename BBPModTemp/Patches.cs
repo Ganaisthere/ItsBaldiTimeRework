@@ -76,7 +76,7 @@ namespace ItsBaldiTimeRework
                 BaldiTimeActions.AddCombo(1f * count);
                 if (BaldiTimeActions.war)
                 {
-                    BaldiTimeActions.AddWarTimer(15f);
+                    BaldiTimeActions.AddWarTimer(20f);
                 }
             }
         }
@@ -94,11 +94,7 @@ namespace ItsBaldiTimeRework
             {
                 if (correct)
                 {
-                    BaldiTimeActions.AddWarTimer(25f);
-                }
-                else
-                {
-                    BaldiTimeActions.AddWarTimer(15f);
+                    BaldiTimeActions.AddWarTimer(20f);
                 }
             }
         }
